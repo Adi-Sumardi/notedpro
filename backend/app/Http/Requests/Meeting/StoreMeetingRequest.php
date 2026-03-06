@@ -20,6 +20,7 @@ class StoreMeetingRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'meeting_date' => ['required', 'date'],
             'location' => ['nullable', 'string', 'max:255'],
+            'organizer' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', Rule::enum(MeetingStatus::class)],
             'participants' => ['nullable', 'array'],
             'participants.*.user_id' => ['required_with:participants', 'exists:users,id'],

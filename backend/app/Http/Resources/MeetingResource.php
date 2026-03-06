@@ -16,6 +16,7 @@ class MeetingResource extends JsonResource
             'description' => $this->description,
             'meeting_date' => $this->meeting_date,
             'location' => $this->location,
+            'organizer' => $this->organizer,
             'status' => $this->status,
             'status_label' => $this->status->label(),
             'created_by' => new UserResource($this->whenLoaded('creator')),

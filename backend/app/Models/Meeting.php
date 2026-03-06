@@ -20,6 +20,7 @@ class Meeting extends Model
         'description',
         'meeting_date',
         'location',
+        'organizer',
         'created_by',
         'status',
         'attachment_path',

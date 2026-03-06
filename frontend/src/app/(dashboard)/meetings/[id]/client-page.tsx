@@ -644,6 +644,12 @@ export default function MeetingDetailPage() {
               <span>{meeting.location}</span>
             </div>
           )}
+          {meeting.organizer && (
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span>Penyelenggara: {meeting.organizer}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-sm">
             <Users className="h-4 w-4 text-muted-foreground" />
             <span>

@@ -48,6 +48,7 @@ const meetingSchema = z.object({
   description: z.string().optional(),
   meeting_date: z.string().min(1, "Tanggal meeting wajib diisi"),
   location: z.string().optional(),
+  organizer: z.string().optional(),
 });
 
 type MeetingFormValues = z.infer<typeof meetingSchema>;
@@ -92,6 +93,7 @@ export default function NewMeetingPage() {
       description: "",
       meeting_date: "",
       location: "",
+      organizer: "",
     },
   });
 
@@ -196,6 +198,7 @@ export default function NewMeetingPage() {
         if (values.description) formData.append("description", values.description);
         formData.append("meeting_date", values.meeting_date);
         if (values.location) formData.append("location", values.location);
+        if (values.organizer) formData.append("organizer", values.organizer);
         formData.append("attachment", attachment);
 
         participants.forEach((p, i) => {
@@ -292,6 +295,15 @@ export default function NewMeetingPage() {
                 id="location"
                 placeholder="Contoh: Ruang Meeting Lantai 3 / Google Meet"
                 {...register("location")}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="organizer">Penyelenggara</Label>
+              <Input
+                id="organizer"
+                placeholder="Contoh: BPH, Keuangan, SDM, Sekretariat"
+                {...register("organizer")}
               />
             </div>
 

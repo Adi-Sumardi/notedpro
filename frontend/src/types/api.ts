@@ -42,6 +42,7 @@ export interface Meeting {
   description: string | null;
   meeting_date: string;
   location: string | null;
+  organizer: string | null;
   status: MeetingStatus;
   status_label: string;
   created_by: User;

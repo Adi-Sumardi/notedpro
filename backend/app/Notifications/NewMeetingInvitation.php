@@ -51,7 +51,7 @@ class NewMeetingInvitation extends Notification
             'meeting_id' => $this->meeting->id,
             'meeting_date' => $this->meeting->meeting_date->format('d M Y H:i'),
             'location' => $this->meeting->location,
-            'invited_by' => $this->meeting->creator->name,
+            'invited_by' => $this->meeting->organizer ?? $this->meeting->creator->name,
         ];
     }
 
@@ -72,7 +72,7 @@ class NewMeetingInvitation extends Notification
             ->line("**Hari/Tanggal:** {$m->meeting_date->translatedFormat('l, d F Y')}")
             ->line("**Waktu:** {$m->meeting_date->format('H:i')} WIB")
             ->line("**Tempat:** " . ($m->location ?? 'Akan diinformasikan kemudian'))
-            ->line("**Penyelenggara:** {$m->creator->name}")
+            ->line("**Penyelenggara:** " . ($m->organizer ?? $m->creator->name))
             ->line('')
             ->when($m->description, fn (MailMessage $msg) => $msg->line("**Keterangan:** {$m->description}"))
             ->line('Mengingat pentingnya agenda yang akan dibahas, kami mengharapkan kehadiran Bapak/Ibu tepat pada waktunya.')
@@ -115,7 +115,7 @@ class NewMeetingInvitation extends Notification
             . "📍 *Tempat:*\n"
             . ($m->location ?? 'Akan diinformasikan kemudian') . "\n\n"
             . "👤 *Penyelenggara:*\n"
-            . "{$m->creator->name}\n\n";
+            . ($m->organizer ?? $m->creator->name) . "\n\n";
 
         if ($m->description) {
             $content .= "📝 *Keterangan:*\n"
