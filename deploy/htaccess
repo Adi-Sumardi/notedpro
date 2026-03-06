@@ -1,23 +1,23 @@
+# Force index.html as default directory index (not index.php)
+DirectoryIndex index.html
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
     # ---- Laravel API & Auth Routes ----
-    # Route /api/*, /sanctum/*, POST /login, POST /logout, POST /register to Laravel
     RewriteCond %{REQUEST_URI} ^/api/ [OR]
     RewriteCond %{REQUEST_URI} ^/sanctum/
-    RewriteRule ^(.*)$ /index.php [L]
+    RewriteRule ^(.*)$ /laravel.php [L]
 
     # ---- Storage (uploaded files) ----
-    RewriteRule ^storage/(.*)$ /index.php [L]
+    RewriteRule ^storage/(.*)$ /laravel.php [L]
 
     # ---- Static files from Next.js export ----
-    # If the file or directory exists, serve it directly
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
     # ---- SPA Fallback ----
-    # For all other routes, serve the Next.js index.html (SPA client-side routing)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ /index.html [L]

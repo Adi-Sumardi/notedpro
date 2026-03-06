@@ -108,9 +108,12 @@ jobs:
             # ---- Public HTML Setup ----
             DEPLOY_DIR="$HOME/domains/simonik.yapinet.id/deploy"
 
-            # Copy htaccess and index.php to public_html
+            # Copy htaccess and laravel.php to public_html
             cp -f "$DEPLOY_DIR/htaccess" "$PUBLIC_DIR/.htaccess"
-            cp -f "$DEPLOY_DIR/index.php" "$PUBLIC_DIR/index.php"
+            cp -f "$DEPLOY_DIR/laravel.php" "$PUBLIC_DIR/laravel.php"
+
+            # Remove old index.php if exists (from previous deploy)
+            rm -f "$PUBLIC_DIR/index.php"
 
             # Create storage symlink
             ln -sfn "$APP_DIR/storage/app/public" "$PUBLIC_DIR/storage"
