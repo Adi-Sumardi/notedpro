@@ -22,11 +22,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Top Content */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm border border-white/10">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#BEDBED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 20h9" /><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z" />
-              </svg>
-            </div>
+            <img src="/logo.png" alt="Simonik" className="h-10 w-10 rounded-lg" />
             <span className="text-xl font-bold tracking-tight">Simonik</span>
           </div>
         </div>
@@ -83,7 +79,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         {/* Bottom */}
         <div className="relative z-10">
-          <p className="text-sm text-white/40">&copy; 2026 Simonik Kolaborasi. All rights reserved.</p>
+          <p className="text-sm text-white/40">&copy; 2026 Simonik. All rights reserved.</p>
         </div>
       </div>
 

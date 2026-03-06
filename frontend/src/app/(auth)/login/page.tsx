@@ -50,14 +50,10 @@ export default function LoginPage() {
     <div className="space-y-8">
       {/* Mobile Logo (hidden on lg) */}
       <div className="flex flex-col items-center lg:hidden">
-        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#063E66] shadow-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#BEDBED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 20h9" /><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z" />
-          </svg>
-        </div>
+        <img src="/logo.png" alt="Simonik" className="h-16 w-16 rounded-xl shadow-lg" />
         <h1 className="mt-3 text-2xl font-bold text-[#063E66]">Simonik</h1>
         <p className="text-sm text-muted-foreground">
-          Meeting Notes & Follow-Up Management
+          Sistem Monitoring Notulensi dan Kolaborasi
         </p>
       </div>
 

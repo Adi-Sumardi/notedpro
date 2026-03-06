@@ -7,7 +7,6 @@ import {
   FileText,
   CheckSquare,
   Users,
-  Pen,
   ClipboardPenLine,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
@@ -72,9 +71,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex flex-col h-full bg-[#063E66]">
-      {/* App Name */}
-      <div className="flex items-center gap-2 px-6 py-5 border-b border-white/10">
-        <Pen className="h-5 w-5 text-[#BEDBED]" />
+      {/* App Logo */}
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10">
+        <img src="/logo.png" alt="Simonik" className="h-9 w-9 rounded-lg" />
         <span className="text-xl font-bold text-white">Simonik</span>
       </div>
 

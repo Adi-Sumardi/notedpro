@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -17,6 +17,18 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "Simonik | Sistem Monitoring Notulensi dan Kolaborasi",
   description: "Sistem Monitoring Notulensi dan Kolaborasi",
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#063E66",
 };
 
 export default function RootLayout({
