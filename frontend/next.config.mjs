@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Clean stale dist files on startup to prevent 500 errors from corrupted cache
+  output: "export",
+  trailingSlash: true,
   cleanDistDir: true,
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;
