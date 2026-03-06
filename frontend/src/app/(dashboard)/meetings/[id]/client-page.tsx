@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouteId } from "@/hooks/useRouteId";
 
-import { useMeeting, useUpdateMeetingStatus } from "@/hooks/useMeetings";
+import { useRouter } from "next/navigation";
+import { useMeeting, useUpdateMeetingStatus, useDeleteMeeting } from "@/hooks/useMeetings";
 import { useCreateTask } from "@/hooks/useTasks";
 import { useUsers } from "@/hooks/useUsers";
 import { useAuthStore } from "@/stores/authStore";
@@ -70,6 +71,7 @@ import {
   X,
   Download,
   Paperclip,
+  Trash2,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -554,13 +556,29 @@ function ExternalParticipantsList({
 export default function MeetingDetailPage() {
   const id = useRouteId();
   const numericId = Number(id);
+  const router = useRouter();
 
   const { user } = useAuthStore();
   const isAdmin =
     user?.roles?.includes("admin") === true || user?.roles?.includes("super-admin") === true;
+  const isSuperAdmin = user?.roles?.includes("super-admin") === true;
 
   const { data: meeting, isLoading } = useMeeting(numericId);
   const updateStatus = useUpdateMeetingStatus(numericId);
+  const deleteMeeting = useDeleteMeeting();
+
+  function handleDelete() {
+    if (!window.confirm("Yakin ingin menghapus meeting ini? Data yang terkait juga akan dihapus.")) return;
+    deleteMeeting.mutate(numericId, {
+      onSuccess: () => {
+        toast.success("Meeting berhasil dihapus.");
+        router.push("/meetings");
+      },
+      onError: () => {
+        toast.error("Gagal menghapus meeting.");
+      },
+    });
+  }
 
   function handleStatusChange(newStatus: string) {
     updateStatus.mutate(
@@ -623,11 +641,28 @@ export default function MeetingDetailPage() {
             <p className="text-muted-foreground">{meeting.description}</p>
           )}
         </div>
-        <StatusChangeButtons
-          meeting={meeting}
-          onStatusChange={handleStatusChange}
-          isPending={updateStatus.isPending}
-        />
+        <div className="flex items-center gap-2">
+          <StatusChangeButtons
+            meeting={meeting}
+            onStatusChange={handleStatusChange}
+            isPending={updateStatus.isPending}
+          />
+          {isSuperAdmin && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleteMeeting.isPending}
+            >
+              {deleteMeeting.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Hapus
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Meeting Info Card */}

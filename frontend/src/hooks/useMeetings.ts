@@ -53,6 +53,17 @@ export function useUpdateMeeting(id: number) {
   });
 }
 
+export function useDeleteMeeting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await api.delete(`/api/v1/meetings/${id}`);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["meetings"] }),
+  });
+}
+
 export function useUpdateMeetingStatus(id: number) {
   const qc = useQueryClient();
   return useMutation({
