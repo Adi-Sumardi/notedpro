@@ -35,7 +35,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_KEY }}
           source: "backend/"
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id/app"
           overwrite: true
@@ -46,7 +46,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_KEY }}
           source: "frontend/out/"
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id/public_html"
           strip_components: 2
@@ -58,7 +58,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_KEY }}
           source: "deploy/"
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id"
           overwrite: true
@@ -69,7 +69,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_KEY }}
           envs: DB_PASSWORD
           script: |
             set -e
