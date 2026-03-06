@@ -497,8 +497,8 @@ export default function NewMeetingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <div className="flex-1">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex-1 min-w-0">
                 <Select
                   onValueChange={addExternalContact}
                   disabled={usersLoading || availableExternals.length === 0}
@@ -526,7 +526,7 @@ export default function NewMeetingPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setShowNewContactDialog(true)}
-                className="gap-1.5 shrink-0"
+                className="gap-1.5 shrink-0 w-full sm:w-auto"
               >
                 <UserPlus className="h-4 w-4" />
                 Kontak Baru
