@@ -47,7 +47,10 @@ const meetingSchema = z.object({
     .max(255, "Judul maksimal 255 karakter"),
   description: z.string().optional(),
   meeting_date: z.string().min(1, "Tanggal meeting wajib diisi"),
+  location_type: z.enum(["offline", "online"]),
   location: z.string().optional(),
+  meeting_link: z.string().optional(),
+  meeting_passcode: z.string().optional(),
   organizer: z.string().optional(),
 });
 
@@ -85,6 +88,8 @@ export default function NewMeetingPage() {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<MeetingFormValues>({
     resolver: zodResolver(meetingSchema),
@@ -92,10 +97,15 @@ export default function NewMeetingPage() {
       title: "",
       description: "",
       meeting_date: "",
+      location_type: "offline",
       location: "",
+      meeting_link: "",
+      meeting_passcode: "",
       organizer: "",
     },
   });
+
+  const locationType = watch("location_type");
 
   useEffect(() => {
     async function fetchData() {
@@ -197,7 +207,10 @@ export default function NewMeetingPage() {
         formData.append("title", values.title);
         if (values.description) formData.append("description", values.description);
         formData.append("meeting_date", values.meeting_date);
+        formData.append("location_type", values.location_type);
         if (values.location) formData.append("location", values.location);
+        if (values.meeting_link) formData.append("meeting_link", values.meeting_link);
+        if (values.meeting_passcode) formData.append("meeting_passcode", values.meeting_passcode);
         if (values.organizer) formData.append("organizer", values.organizer);
         formData.append("attachment", attachment);
 
@@ -290,13 +303,62 @@ export default function NewMeetingPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location">Lokasi</Label>
-              <Input
-                id="location"
-                placeholder="Contoh: Ruang Meeting Lantai 3 / Google Meet"
-                {...register("location")}
-              />
+              <Label>Tipe Lokasi</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="offline"
+                    checked={locationType === "offline"}
+                    onChange={() => setValue("location_type", "offline")}
+                    className="accent-primary"
+                  />
+                  <span className="text-sm">Offline</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="online"
+                    checked={locationType === "online"}
+                    onChange={() => setValue("location_type", "online")}
+                    className="accent-primary"
+                  />
+                  <span className="text-sm">Online</span>
+                </label>
+              </div>
             </div>
+
+            {locationType === "offline" ? (
+              <div className="space-y-2">
+                <Label htmlFor="location">Lokasi</Label>
+                <Input
+                  id="location"
+                  placeholder="Contoh: Ruang Meeting Lantai 3"
+                  {...register("location")}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="meeting_link">
+                    Link Meeting <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="meeting_link"
+                    placeholder="Contoh: https://zoom.us/j/123456789"
+                    {...register("meeting_link")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="meeting_passcode">Passcode</Label>
+                  <Input
+                    id="meeting_passcode"
+                    placeholder="Opsional"
+                    {...register("meeting_passcode")}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="organizer">Penyelenggara</Label>

@@ -72,6 +72,9 @@ import {
   Download,
   Paperclip,
   Trash2,
+  Video,
+  LinkIcon,
+  KeyRound,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -672,10 +675,29 @@ export default function MeetingDetailPage() {
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
             <span>{meetingDate}</span>
           </div>
-          {meeting.location && (
+          {meeting.location_type === "online" ? (
+            <div className="flex items-center gap-2 text-sm">
+              <Video className="h-4 w-4 text-muted-foreground" />
+              <span>Online</span>
+            </div>
+          ) : meeting.location ? (
             <div className="flex items-center gap-2 text-sm">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span>{meeting.location}</span>
+            </div>
+          ) : null}
+          {meeting.location_type === "online" && meeting.meeting_link && (
+            <div className="flex items-center gap-2 text-sm">
+              <LinkIcon className="h-4 w-4 text-muted-foreground" />
+              <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+                {meeting.meeting_link}
+              </a>
+            </div>
+          )}
+          {meeting.location_type === "online" && meeting.meeting_passcode && (
+            <div className="flex items-center gap-2 text-sm">
+              <KeyRound className="h-4 w-4 text-muted-foreground" />
+              <span>Passcode: {meeting.meeting_passcode}</span>
             </div>
           )}
           {meeting.organizer && (

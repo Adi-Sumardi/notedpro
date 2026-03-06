@@ -71,7 +71,9 @@ class NewMeetingInvitation extends Notification
             ->line("**Agenda:** {$m->title}")
             ->line("**Hari/Tanggal:** {$m->meeting_date->translatedFormat('l, d F Y')}")
             ->line("**Waktu:** {$m->meeting_date->format('H:i')} WIB")
-            ->line("**Tempat:** " . ($m->location ?? 'Akan diinformasikan kemudian'))
+            ->line("**Tempat:** " . ($m->location_type === 'online' ? 'Online' : ($m->location ?? 'Akan diinformasikan kemudian')))
+            ->when($m->location_type === 'online' && $m->meeting_link, fn (MailMessage $msg) => $msg->line("**Link Meeting:** {$m->meeting_link}"))
+            ->when($m->location_type === 'online' && $m->meeting_passcode, fn (MailMessage $msg) => $msg->line("**Passcode:** {$m->meeting_passcode}"))
             ->line("**Penyelenggara:** " . ($m->organizer ?? $m->creator->name))
             ->line('')
             ->when($m->description, fn (MailMessage $msg) => $msg->line("**Keterangan:** {$m->description}"))
@@ -113,7 +115,9 @@ class NewMeetingInvitation extends Notification
             . "⏰ *Waktu:*\n"
             . "{$time} WIB\n\n"
             . "📍 *Tempat:*\n"
-            . ($m->location ?? 'Akan diinformasikan kemudian') . "\n\n"
+            . ($m->location_type === 'online' ? 'Online' : ($m->location ?? 'Akan diinformasikan kemudian')) . "\n\n"
+            . ($m->location_type === 'online' && $m->meeting_link ? "🔗 *Link Meeting:*\n{$m->meeting_link}\n\n" : '')
+            . ($m->location_type === 'online' && $m->meeting_passcode ? "🔑 *Passcode:*\n{$m->meeting_passcode}\n\n" : '')
             . "👤 *Penyelenggara:*\n"
             . ($m->organizer ?? $m->creator->name) . "\n\n";
 

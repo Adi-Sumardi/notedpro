@@ -42,6 +42,9 @@ export interface Meeting {
   description: string | null;
   meeting_date: string;
   location: string | null;
+  location_type: "offline" | "online";
+  meeting_link: string | null;
+  meeting_passcode: string | null;
   organizer: string | null;
   status: MeetingStatus;
   status_label: string;
