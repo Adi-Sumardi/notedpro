@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useRouteId } from "@/hooks/useRouteId";
 
 import { useMeeting, useUpdateMeetingStatus } from "@/hooks/useMeetings";
 import { useCreateTask } from "@/hooks/useTasks";
@@ -552,8 +552,7 @@ function ExternalParticipantsList({
 }
 
 export default function MeetingDetailPage() {
-  const params = useParams();
-  const id = params.id as string;
+  const id = useRouteId();
   const numericId = Number(id);
 
   const { user } = useAuthStore();

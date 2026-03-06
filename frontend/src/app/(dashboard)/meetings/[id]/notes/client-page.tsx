@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useRouteId } from "@/hooks/useRouteId";
 
 import { ArrowLeft, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,9 +39,9 @@ const statusVariant: Record<FollowUpStatus, string> = {
 };
 
 export default function MeetingNotesPage() {
-  const params = useParams();
+  const id = useRouteId();
   const router = useRouter();
-  const meetingId = Number(params.id);
+  const meetingId = Number(id);
 
   const { data: meeting, isLoading: meetingLoading } = useMeeting(meetingId);
   const { data: notes, isLoading: notesLoading } = useMeetingNotes(meetingId);

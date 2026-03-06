@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useRouteId } from "@/hooks/useRouteId";
 
 import {
   ArrowLeft,
@@ -57,9 +58,9 @@ function getInitials(name: string): string {
 }
 
 export default function TaskDetailPage() {
-  const params = useParams();
+  const id = useRouteId();
   const router = useRouter();
-  const taskId = Number(params.id);
+  const taskId = Number(id);
 
   const { data: task, isLoading } = useTask(taskId);
   const updateStatus = useUpdateTaskStatus(taskId);

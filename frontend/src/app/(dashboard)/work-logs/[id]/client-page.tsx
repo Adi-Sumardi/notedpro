@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useRouteId } from "@/hooks/useRouteId";
 import Link from "next/link";
 
 import { useWorkLog, useSubmitWorkLog, useReviewWorkLog, useDeleteWorkLog } from "@/hooks/useWorkLogs";
@@ -57,9 +58,9 @@ const categoryColorMap: Record<string, string> = {
 };
 
 export default function WorkLogDetailPage() {
-  const params = useParams();
+  const routeId = useRouteId();
   const router = useRouter();
-  const id = Number(params.id);
+  const id = Number(routeId);
 
   const { user, hasRole } = useAuthStore();
   const isReviewer =

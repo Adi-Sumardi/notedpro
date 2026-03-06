@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useRouteId } from "@/hooks/useRouteId";
 
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -67,9 +68,9 @@ const workLogSchema = z.object({
 type WorkLogFormValues = z.infer<typeof workLogSchema>;
 
 export default function EditWorkLogPage() {
-  const params = useParams();
+  const routeId = useRouteId();
   const router = useRouter();
-  const id = Number(params.id);
+  const id = Number(routeId);
 
   const { data: log, isLoading } = useWorkLog(id);
   const updateWorkLog = useUpdateWorkLog(id);
