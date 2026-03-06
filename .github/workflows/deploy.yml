@@ -70,12 +70,13 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          envs: DB_PASSWORD
+          envs: DB_DATABASE,DB_USERNAME,DB_PASSWORD,MAIL_HOST,MAIL_PORT,MAIL_USERNAME,MAIL_PASSWORD,WATZAP_API_KEY,WATZAP_NUMBER_KEY
           script: |
             set -e
 
             APP_DIR="$HOME/domains/simonik.yapinet.id/app/backend"
             PUBLIC_DIR="$HOME/domains/simonik.yapinet.id/public_html"
+            DEPLOY_DIR="$HOME/domains/simonik.yapinet.id/deploy"
 
             # ---- Backend Setup ----
             cd "$APP_DIR"
@@ -83,18 +84,33 @@ jobs:
             # Install Composer dependencies
             composer install --no-dev --optimize-autoloader --no-interaction 2>&1
 
-            # Setup .env on first deploy
-            if [ ! -f .env ]; then
-              DEPLOY_DIR="$HOME/domains/simonik.yapinet.id/deploy"
-              if [ -f "$DEPLOY_DIR/.env.production" ]; then
-                cp "$DEPLOY_DIR/.env.production" .env
-              else
-                cp .env.example .env
+            # Setup .env from template (always update from latest template)
+            if [ -f "$DEPLOY_DIR/.env.production" ]; then
+              # Preserve existing APP_KEY if .env already exists
+              EXISTING_KEY=""
+              if [ -f .env ]; then
+                EXISTING_KEY=$(grep "^APP_KEY=" .env | cut -d'=' -f2-)
               fi
-              # Set database password from secret
-              sed -i "s/\"\${DB_PASSWORD}\"/$DB_PASSWORD/g" .env
-              php artisan key:generate --force
-              echo "==> First deploy: .env created. Review and adjust if needed."
+
+              cp "$DEPLOY_DIR/.env.production" .env
+
+              # Replace all secret placeholders
+              sed -i "s|\"\${DB_DATABASE}\"|$DB_DATABASE|g" .env
+              sed -i "s|\"\${DB_USERNAME}\"|$DB_USERNAME|g" .env
+              sed -i "s|\"\${DB_PASSWORD}\"|$DB_PASSWORD|g" .env
+              sed -i "s|\"\${MAIL_HOST}\"|$MAIL_HOST|g" .env
+              sed -i "s|\"\${MAIL_PORT}\"|$MAIL_PORT|g" .env
+              sed -i "s|\"\${MAIL_USERNAME}\"|$MAIL_USERNAME|g" .env
+              sed -i "s|\"\${MAIL_PASSWORD}\"|$MAIL_PASSWORD|g" .env
+              sed -i "s|\"\${WATZAP_API_KEY}\"|$WATZAP_API_KEY|g" .env
+              sed -i "s|\"\${WATZAP_NUMBER_KEY}\"|$WATZAP_NUMBER_KEY|g" .env
+
+              # Restore or generate APP_KEY
+              if [ -n "$EXISTING_KEY" ]; then
+                sed -i "s|^APP_KEY=.*|APP_KEY=$EXISTING_KEY|" .env
+              else
+                php artisan key:generate --force
+              fi
             fi
 
             # Run database migrations
@@ -106,8 +122,6 @@ jobs:
             php artisan view:cache
 
             # ---- Public HTML Setup ----
-            DEPLOY_DIR="$HOME/domains/simonik.yapinet.id/deploy"
-
             # Copy htaccess and laravel.php to public_html
             cp -f "$DEPLOY_DIR/htaccess" "$PUBLIC_DIR/.htaccess"
             cp -f "$DEPLOY_DIR/laravel.php" "$PUBLIC_DIR/laravel.php"
@@ -120,4 +134,12 @@ jobs:
 
             echo "==> Deployment complete! https://simonik.yapinet.id"
         env:
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          WATZAP_API_KEY: ${{ secrets.WATZAP_API_KEY }}
+          WATZAP_NUMBER_KEY: ${{ secrets.WATZAP_NUMBER_KEY }}
