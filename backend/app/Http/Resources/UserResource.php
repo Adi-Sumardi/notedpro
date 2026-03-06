@@ -19,6 +19,9 @@ class UserResource extends JsonResource
             'department' => $this->department,
             'is_active' => $this->is_active,
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')),
+            'pivot' => $this->whenPivotLoaded('meeting_participants', fn () => [
+                'role' => $this->pivot->role,
+            ]),
             'permissions' => $this->when(
                 $request->routeIs('auth.user'),
                 fn () => $this->getAllPermissions()->pluck('name')
