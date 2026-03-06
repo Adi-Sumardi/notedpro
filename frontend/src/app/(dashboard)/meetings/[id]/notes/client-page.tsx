@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRouteId } from "@/hooks/useRouteId";
 
 import { ArrowLeft, Loader2, FileText } from "lucide-react";
+import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -77,31 +78,33 @@ export default function MeetingNotesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push(`/meetings/${meetingId}`)}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">
-            <FileText className="inline-block h-6 w-6 mr-2 text-muted-foreground" />
-            Notulensi Rapat
-          </h1>
-          {meeting && (
-            <p className="text-muted-foreground mt-1">{meeting.title}</p>
+      <PageHeader>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/10"
+            onClick={() => router.push(`/meetings/${meetingId}`)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold tracking-tight">
+              <FileText className="inline-block h-6 w-6 mr-2 text-white/60" />
+              Notulensi Rapat
+            </h1>
+            {meeting && (
+              <p className="text-white/80 mt-1">{meeting.title}</p>
+            )}
+          </div>
+          {latestNote && (
+            <span className="text-xs text-white/60">
+              Versi {latestNote.version} &middot; Terakhir disimpan{" "}
+              {new Date(latestNote.updated_at).toLocaleString("id-ID")}
+            </span>
           )}
         </div>
-        {latestNote && (
-          <span className="text-xs text-muted-foreground">
-            Versi {latestNote.version} &middot; Terakhir disimpan{" "}
-            {new Date(latestNote.updated_at).toLocaleString("id-ID")}
-          </span>
-        )}
-      </div>
+      </PageHeader>
 
       {/* Tiptap Editor */}
       <TiptapEditor

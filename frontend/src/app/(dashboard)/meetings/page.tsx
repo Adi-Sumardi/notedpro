@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMeetings } from "@/hooks/useMeetings";
 import { useAuthStore } from "@/stores/authStore";
 import type { Meeting } from "@/types/api";
+import PageHeader from "@/components/layout/PageHeader";
 
 import {
   Card,
@@ -124,23 +125,24 @@ export default function MeetingsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Meetings</h1>
-          <p className="text-muted-foreground">
-            Kelola rapat dan catatan meeting tim.
-          </p>
+      <PageHeader>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Meetings</h1>
+            <p className="text-white/80">
+              Kelola rapat dan catatan meeting tim.
+            </p>
+          </div>
+          {canCreate && (
+            <Button asChild variant="secondary">
+              <Link href="/meetings/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Buat Meeting
+              </Link>
+            </Button>
+          )}
         </div>
-        {canCreate && (
-          <Button asChild>
-            <Link href="/meetings/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Buat Meeting
-            </Link>
-          </Button>
-        )}
-      </div>
+      </PageHeader>
 
       {/* Search */}
       <div className="relative max-w-sm">

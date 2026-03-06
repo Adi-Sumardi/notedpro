@@ -10,6 +10,7 @@ import { useCreateTask } from "@/hooks/useTasks";
 import { useUsers } from "@/hooks/useUsers";
 import { useAuthStore } from "@/stores/authStore";
 import type { Meeting, FollowUpItem, ExternalContact } from "@/types/api";
+import PageHeader from "@/components/layout/PageHeader";
 import { toast } from "sonner";
 
 import {
@@ -47,6 +48,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -79,11 +91,6 @@ import {
 import { format, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
-const meetingStatusColorMap: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700 hover:bg-gray-100",
-  in_progress: "bg-blue-100 text-blue-700 hover:bg-blue-100",
-  completed: "bg-green-100 text-green-700 hover:bg-green-100",
-};
 
 const meetingStatusLabelMap: Record<string, string> = {
   draft: "Draft",
@@ -571,7 +578,6 @@ export default function MeetingDetailPage() {
   const deleteMeeting = useDeleteMeeting();
 
   function handleDelete() {
-    if (!window.confirm("Yakin ingin menghapus meeting ini? Data yang terkait juga akan dihapus.")) return;
     deleteMeeting.mutate(numericId, {
       onSuccess: () => {
         toast.success("Meeting berhasil dihapus.");
@@ -626,47 +632,68 @@ export default function MeetingDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {meeting.title}
-            </h1>
-            <Badge
-              variant="secondary"
-              className={meetingStatusColorMap[meeting.status] ?? ""}
-            >
-              {meetingStatusLabelMap[meeting.status] ?? meeting.status}
-            </Badge>
+      <PageHeader>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight">
+                {meeting.title}
+              </h1>
+              <Badge
+                variant="secondary"
+                className="bg-white/20 text-white hover:bg-white/20"
+              >
+                {meetingStatusLabelMap[meeting.status] ?? meeting.status}
+              </Badge>
+            </div>
+            {meeting.description && (
+              <p className="text-white/80">{meeting.description}</p>
+            )}
           </div>
-          {meeting.description && (
-            <p className="text-muted-foreground">{meeting.description}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <StatusChangeButtons
+          <div className="flex items-center gap-2">
+            <StatusChangeButtons
             meeting={meeting}
             onStatusChange={handleStatusChange}
             isPending={updateStatus.isPending}
           />
           {isSuperAdmin && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deleteMeeting.isPending}
-            >
-              {deleteMeeting.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
-              )}
-              Hapus
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleteMeeting.isPending}
+                >
+                  {deleteMeeting.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  Hapus
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Hapus Meeting?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Yakin ingin menghapus meeting ini? Semua data terkait (catatan, follow-up, tugas) juga akan dihapus. Tindakan ini tidak dapat dibatalkan.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Ya, Hapus
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
+          </div>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Meeting Info Card */}
       <Card>

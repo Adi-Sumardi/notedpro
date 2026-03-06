@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRouteId } from "@/hooks/useRouteId";
+import PageHeader from "@/components/layout/PageHeader";
 
 import {
   ArrowLeft,
@@ -23,21 +24,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTask, useUpdateTaskStatus, useAddComment } from "@/hooks/useTasks";
 import { toast } from "sonner";
-import type { TaskStatus, Priority } from "@/types/api";
+import type { TaskStatus } from "@/types/api";
 
-const priorityVariant: Record<Priority, string> = {
-  low: "bg-gray-100 text-gray-700",
-  medium: "bg-blue-100 text-blue-700",
-  high: "bg-orange-100 text-orange-700",
-  urgent: "bg-red-100 text-red-700",
-};
-
-const statusVariant: Record<TaskStatus, string> = {
-  todo: "bg-gray-100 text-gray-700",
-  in_progress: "bg-blue-100 text-blue-700",
-  review: "bg-purple-100 text-purple-700",
-  done: "bg-green-100 text-green-700",
-};
 
 const statusLabel: Record<TaskStatus, string> = {
   todo: "To Do",
@@ -115,31 +103,32 @@ export default function TaskDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push("/tasks")}
-          className="mt-1"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{task.title}</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <Badge className={statusVariant[task.status]} variant="outline">
-              {task.status_label}
-            </Badge>
-            <Badge className={priorityVariant[task.priority]} variant="outline">
-              {task.priority_label}
-            </Badge>
-            {task.is_overdue && (
-              <Badge variant="destructive">Terlambat</Badge>
-            )}
+      <PageHeader>
+        <div className="flex items-start gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/tasks")}
+            className="mt-1 text-white hover:bg-white/10"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold tracking-tight">{task.title}</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge className="bg-white/20 text-white border-white/30" variant="outline">
+                {task.status_label}
+              </Badge>
+              <Badge className="bg-white/20 text-white border-white/30" variant="outline">
+                {task.priority_label}
+              </Badge>
+              {task.is_overdue && (
+                <Badge variant="destructive">Terlambat</Badge>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}

@@ -127,7 +127,7 @@ function NotificationBell() {
         className="relative"
         onClick={() => setOpen(!open)}
       >
-        <Bell className="h-5 w-5 text-white/80 hover:text-white" />
+        <Bell className="h-5 w-5 text-[#063E66]" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
             {unreadCount > 99 ? "99+" : unreadCount}
@@ -212,7 +212,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-30 bg-gradient-to-r from-[#063E66] via-[#1C61A2] to-[#063E66]">
+      <header className="fixed top-0 left-0 right-0 z-30 border-b border-gray-200 bg-white">
         <div className="mx-auto max-w-7xl px-4">
           <div className="flex h-16 items-center justify-between">
             {/* Left: Logo + Desktop Nav */}
@@ -220,7 +220,7 @@ export default function Header() {
               {/* Logo */}
               <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
                 <img src="/logo.png" alt="Simonik" className="h-8 w-8 rounded-lg" />
-                <span className="text-lg font-bold text-white hidden sm:inline">Simonik</span>
+                <span className="text-lg font-bold text-[#063E66] hidden sm:inline">Simonik</span>
               </Link>
 
               {/* Desktop Navigation */}
@@ -237,8 +237,8 @@ export default function Header() {
                       href={item.href}
                       className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                         isActive
-                          ? "bg-white/15 text-white"
-                          : "text-white/70 hover:bg-white/10 hover:text-white"
+                          ? "bg-[#063E66] text-white"
+                          : "text-[#063E66]/70 hover:bg-[#063E66]/10 hover:text-[#063E66]"
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -257,7 +257,7 @@ export default function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-2 px-2 hover:bg-white/10"
+                    className="flex items-center gap-2 px-2 hover:bg-gray-100"
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-[#BEDBED] text-[#063E66] text-xs font-semibold">
@@ -265,12 +265,12 @@ export default function Header() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden sm:flex flex-col items-start">
-                      <span className="text-sm font-medium text-white leading-tight">
+                      <span className="text-sm font-medium text-[#063E66] leading-tight">
                         {user?.name}
                       </span>
                       <Badge
                         variant="secondary"
-                        className="text-[10px] px-1.5 py-0 h-4 capitalize bg-white/15 text-white/80 hover:bg-white/15"
+                        className="text-[10px] px-1.5 py-0 h-4 capitalize"
                       >
                         {user?.roles?.[0]}
                       </Badge>
@@ -302,7 +302,7 @@ export default function Header() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="lg:hidden text-white/80 hover:bg-white/10 hover:text-white"
+                className="lg:hidden text-[#063E66]"
                 onClick={() => setMobileMenuOpen(true)}
               >
                 <Menu className="h-5 w-5" />

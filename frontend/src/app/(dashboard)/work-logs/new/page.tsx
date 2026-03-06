@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/layout/PageHeader";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -112,14 +113,14 @@ export default function NewWorkLogPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <PageHeader>
         <h1 className="text-2xl font-bold tracking-tight">
           Buat Laporan Harian
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-white/80">
           Catat kegiatan kerja Anda hari ini.
         </p>
-      </div>
+      </PageHeader>
 
       <form
         onSubmit={handleSubmit((v) => onSubmit(v, false))}

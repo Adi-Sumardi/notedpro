@@ -5,6 +5,7 @@ import { useTasks } from "@/hooks/useTasks";
 import { useAuthStore } from "@/stores/authStore";
 import type { Task, TaskStatus, DashboardSummary } from "@/types/api";
 import Link from "next/link";
+import PageHeader from "@/components/layout/PageHeader";
 
 import {
   Card,
@@ -397,19 +398,21 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#063E66]">
-            Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            {isAdmin
-              ? "Ringkasan keseluruhan proyek dan tugas tim."
-              : "Ringkasan tugas dan aktivitas Anda."}
-          </p>
+      <PageHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Dashboard
+            </h1>
+            <p className="text-white/80">
+              {isAdmin
+                ? "Ringkasan keseluruhan proyek dan tugas tim."
+                : "Ringkasan tugas dan aktivitas Anda."}
+            </p>
+          </div>
+          <LiveIndicator />
         </div>
-        <LiveIndicator />
-      </div>
+      </PageHeader>
 
       <SummaryCards summary={summary} isLoading={summaryLoading} />
 

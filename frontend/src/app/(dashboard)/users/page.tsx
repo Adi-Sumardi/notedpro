@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import PageHeader from "@/components/layout/PageHeader";
 import {
   Loader2,
   Plus,
@@ -176,22 +177,23 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-6 w-6 text-muted-foreground" />
-            Manajemen User
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Kelola akun pengguna aplikasi.
-          </p>
+      <PageHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <Users className="h-6 w-6 text-white/60" />
+              Manajemen User
+            </h1>
+            <p className="text-white/80 mt-1">
+              Kelola akun pengguna aplikasi.
+            </p>
+          </div>
+          <Button onClick={handleOpenCreate} variant="secondary" className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Tambah User
+          </Button>
         </div>
-        <Button onClick={handleOpenCreate} className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          Tambah User
-        </Button>
-      </div>
+      </PageHeader>
 
       {/* Users Table */}
       {isLoading ? (

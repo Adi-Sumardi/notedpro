@@ -9,6 +9,7 @@ import { useCreateMeeting } from "@/hooks/useMeetings";
 import { toast } from "sonner";
 import type { User, ExternalContact } from "@/types/api";
 import api from "@/lib/api";
+import PageHeader from "@/components/layout/PageHeader";
 
 import {
   Card,
@@ -245,12 +246,12 @@ export default function NewMeetingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <PageHeader>
         <h1 className="text-2xl font-bold tracking-tight">Buat Meeting Baru</h1>
-        <p className="text-muted-foreground">
+        <p className="text-white/80">
           Isi detail meeting untuk mulai mencatat.
         </p>
-      </div>
+      </PageHeader>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Meeting Details */}

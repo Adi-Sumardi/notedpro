@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/layout/PageHeader";
 import {
   Search,
   Loader2,
@@ -101,16 +102,15 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
+      <PageHeader>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <ListTodo className="h-6 w-6 text-muted-foreground" />
+          <ListTodo className="h-6 w-6 text-white/60" />
           Semua Tugas
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-white/80 mt-1">
           Kelola dan pantau semua tugas dari seluruh rapat.
         </p>
-      </div>
+      </PageHeader>
 
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3">

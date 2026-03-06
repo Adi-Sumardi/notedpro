@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRouteId } from "@/hooks/useRouteId";
 import Link from "next/link";
+import PageHeader from "@/components/layout/PageHeader";
 
 import { useWorkLog, useSubmitWorkLog, useReviewWorkLog, useDeleteWorkLog } from "@/hooks/useWorkLogs";
 import { useAuthStore } from "@/stores/authStore";
@@ -22,6 +23,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -39,14 +51,7 @@ import {
   XCircle,
   Trash2,
 } from "lucide-react";
-import type { WorkLogStatus } from "@/types/api";
 
-const statusColorMap: Record<WorkLogStatus, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  submitted: "bg-blue-100 text-blue-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
-};
 
 const categoryColorMap: Record<string, string> = {
   meeting: "bg-purple-100 text-purple-700",
@@ -130,7 +135,6 @@ export default function WorkLogDetailPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Yakin ingin menghapus laporan ini?")) return;
     try {
       await deleteLog.mutateAsync(id);
       toast.success("Laporan berhasil dihapus.");
@@ -142,73 +146,95 @@ export default function WorkLogDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Laporan Harian
-            </h1>
-            <Badge
-              variant="secondary"
-              className={statusColorMap[log.status] ?? ""}
-            >
-              {log.status_label}
-            </Badge>
+      <PageHeader>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight">
+                Laporan Harian
+              </h1>
+              <Badge
+                variant="secondary"
+                className="bg-white/20 text-white hover:bg-white/20"
+              >
+                {log.status_label}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-white/70">
+              <span className="flex items-center gap-1.5">
+                <CalendarDays className="h-4 w-4" />
+                {new Date(log.log_date).toLocaleDateString("id-ID", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <UserIcon className="h-4 w-4" />
+                {log.user?.name}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <CalendarDays className="h-4 w-4" />
-              {new Date(log.log_date).toLocaleDateString("id-ID", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <UserIcon className="h-4 w-4" />
-              {log.user?.name}
-            </span>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          {canEdit && (
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/work-logs/${id}/edit`}>
-                <Pencil className="mr-1.5 h-4 w-4" />
-                Edit
-              </Link>
-            </Button>
-          )}
-          {canSubmit && (
-            <Button
-              size="sm"
-              onClick={handleSubmit}
-              disabled={submitLog.isPending}
-            >
-              {submitLog.isPending ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="mr-1.5 h-4 w-4" />
-              )}
-              Ajukan
-            </Button>
-          )}
-          {canDelete && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deleteLog.isPending}
-            >
-              <Trash2 className="mr-1.5 h-4 w-4" />
-              Hapus
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <Button asChild variant="secondary" size="sm">
+                <Link href={`/work-logs/${id}/edit`}>
+                  <Pencil className="mr-1.5 h-4 w-4" />
+                  Edit
+                </Link>
+              </Button>
+            )}
+            {canSubmit && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleSubmit}
+                disabled={submitLog.isPending}
+              >
+                {submitLog.isPending ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-1.5 h-4 w-4" />
+                )}
+                Ajukan
+              </Button>
+            )}
+            {canDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={deleteLog.isPending}
+                  >
+                    <Trash2 className="mr-1.5 h-4 w-4" />
+                    Hapus
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hapus Laporan?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Yakin ingin menghapus laporan harian ini? Tindakan ini tidak dapat dibatalkan.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Ya, Hapus
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Notes */}
       {log.notes && (

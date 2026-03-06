@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/layout/PageHeader";
 import { useRouteId } from "@/hooks/useRouteId";
 
 import { useForm, useFieldArray } from "react-hook-form";
@@ -144,14 +145,14 @@ export default function EditWorkLogPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <PageHeader>
         <h1 className="text-2xl font-bold tracking-tight">
           Edit Laporan Harian
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-white/80">
           Perbarui kegiatan kerja Anda.
         </p>
-      </div>
+      </PageHeader>
 
       <form
         onSubmit={handleSubmit((v) => onSubmit(v, false))}

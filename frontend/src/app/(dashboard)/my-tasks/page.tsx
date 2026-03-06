@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/layout/PageHeader";
 import {
   Loader2,
   Calendar,
@@ -154,16 +155,15 @@ export default function MyTasksPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
+      <PageHeader>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <ClipboardList className="h-6 w-6 text-muted-foreground" />
+          <ClipboardList className="h-6 w-6 text-white/60" />
           Tugas Saya
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-white/80 mt-1">
           Daftar tugas yang ditugaskan kepada Anda.
         </p>
-      </div>
+      </PageHeader>
 
       {tasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-white text-muted-foreground">

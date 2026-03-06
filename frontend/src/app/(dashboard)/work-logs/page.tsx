@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import PageHeader from "@/components/layout/PageHeader";
 import {
   Search,
   Loader2,
@@ -66,26 +67,27 @@ export default function WorkLogsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <ClipboardPenLine className="h-6 w-6 text-muted-foreground" />
-            Laporan Harian
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {isReviewer
-              ? "Pantau dan review laporan harian tim."
-              : "Catat dan kelola pekerjaan harian Anda."}
-          </p>
+      <PageHeader>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <ClipboardPenLine className="h-6 w-6 text-white/60" />
+              Laporan Harian
+            </h1>
+            <p className="text-white/80 mt-1">
+              {isReviewer
+                ? "Pantau dan review laporan harian tim."
+                : "Catat dan kelola pekerjaan harian Anda."}
+            </p>
+          </div>
+          <Button asChild variant="secondary">
+            <Link href="/work-logs/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Buat Laporan
+            </Link>
+          </Button>
         </div>
-        <Button asChild>
-          <Link href="/work-logs/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Buat Laporan
-          </Link>
-        </Button>
-      </div>
+      </PageHeader>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
