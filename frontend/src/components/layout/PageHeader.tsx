@@ -4,7 +4,7 @@ interface PageHeaderProps {
 
 export default function PageHeader({ children }: PageHeaderProps) {
   return (
-    <div className="-mx-4 -mt-4 md:-mx-6 md:-mt-6 mb-6 relative overflow-hidden bg-[#063E66] px-4 py-6 md:px-6 md:py-8 text-white">
+    <div className="mb-6 relative overflow-hidden bg-[#063E66] rounded-2xl px-5 py-6 md:px-8 md:py-8 text-white shadow-lg">
       {/* Decorative ornaments */}
       <div className="pointer-events-none absolute inset-0">
         {/* Large circle — top right */}
