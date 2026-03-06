@@ -55,7 +55,7 @@ export default function LoginPage() {
             <path d="M12 20h9" /><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z" />
           </svg>
         </div>
-        <h1 className="mt-3 text-2xl font-bold text-[#063E66]">NotedPro</h1>
+        <h1 className="mt-3 text-2xl font-bold text-[#063E66]">Simonik</h1>
         <p className="text-sm text-muted-foreground">
           Meeting Notes & Follow-Up Management
         </p>
@@ -133,7 +133,7 @@ export default function LoginPage() {
 
       {/* Footer info */}
       <p className="text-center text-xs text-muted-foreground lg:hidden">
-        &copy; 2026 NotedPro Kolaborasi
+        &copy; 2026 Simonik Kolaborasi
       </p>
     </div>
   );

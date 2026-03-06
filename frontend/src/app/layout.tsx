@@ -15,8 +15,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "NotedPro Kolaborasi",
-  description: "Meeting Notes & Follow-Up Management",
+  title: "Simonik | Sistem Monitoring Notulensi dan Kolaborasi",
+  description: "Sistem Monitoring Notulensi dan Kolaborasi",
 };
 
 export default function RootLayout({

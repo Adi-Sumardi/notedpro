@@ -75,7 +75,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* App Name */}
       <div className="flex items-center gap-2 px-6 py-5 border-b border-white/10">
         <Pen className="h-5 w-5 text-[#BEDBED]" />
-        <span className="text-xl font-bold text-white">NotedPro</span>
+        <span className="text-xl font-bold text-white">Simonik</span>
       </div>
 
       {/* Navigation Links */}
