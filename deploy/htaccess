@@ -17,7 +17,15 @@ DirectoryIndex index.html
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # ---- SPA Fallback ----
+    # ---- Dynamic Route Fallbacks ----
+    # Serve pre-rendered shell for dynamic routes (Next.js reads actual ID from URL)
+    RewriteRule ^meetings/[^/]+/notes/?$ /meetings/0/notes/index.html [L]
+    RewriteRule ^meetings/[^/]+/?$ /meetings/0/index.html [L]
+    RewriteRule ^tasks/[^/]+/?$ /tasks/0/index.html [L]
+    RewriteRule ^work-logs/[^/]+/edit/?$ /work-logs/0/edit/index.html [L]
+    RewriteRule ^work-logs/[^/]+/?$ /work-logs/0/index.html [L]
+
+    # ---- SPA Fallback (other routes) ----
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ /index.html [L]
