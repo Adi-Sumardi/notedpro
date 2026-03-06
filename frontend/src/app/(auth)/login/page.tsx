@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { AxiosError } from "axios";
 
 import { useAuthStore } from "@/stores/authStore";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   useAuth({ middleware: "guest" });
@@ -29,18 +29,42 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage("");
 
     try {
       await login(email, password);
       router.replace("/dashboard");
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Login gagal. Silakan coba lagi.";
-      toast.error(message);
+      if (error instanceof AxiosError && error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+
+        if (status === 422) {
+          // Validation error — ambil pesan dari field errors atau message
+          const fieldErrors = data?.errors;
+          if (fieldErrors) {
+            const firstError = Object.values(fieldErrors).flat()[0];
+            setErrorMessage(String(firstError));
+          } else {
+            setErrorMessage(data?.message || "Data yang dimasukkan tidak valid.");
+          }
+        } else if (status === 401) {
+          setErrorMessage("Email atau password yang Anda masukkan salah.");
+        } else if (status === 403) {
+          setErrorMessage(data?.message || "Akun Anda tidak aktif. Hubungi administrator.");
+        } else if (status >= 500) {
+          setErrorMessage("Terjadi gangguan pada server. Silakan coba beberapa saat lagi.");
+        } else {
+          setErrorMessage(data?.message || "Login gagal. Silakan coba lagi.");
+        }
+      } else {
+        setErrorMessage("Tidak dapat terhubung ke server. Periksa koneksi internet Anda.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -67,6 +91,15 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {errorMessage && (
+              <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">Login Gagal</p>
+                  <p className="text-sm text-red-600 mt-0.5">{errorMessage}</p>
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
