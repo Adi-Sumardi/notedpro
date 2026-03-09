@@ -1,6 +1,8 @@
 # Force index.html as default directory index (not index.php)
 DirectoryIndex index.html
 
+Options +FollowSymLinks
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
@@ -9,11 +11,9 @@ DirectoryIndex index.html
     RewriteCond %{REQUEST_URI} ^/sanctum/
     RewriteRule ^(.*)$ /laravel.php [L]
 
-    # ---- Storage (uploaded files) ----
-    RewriteRule ^storage/(.*)$ /laravel.php [L]
-
-    # ---- Static files from Next.js export ----
+    # ---- Static files (including storage symlink & Next.js export) ----
     RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -l [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
