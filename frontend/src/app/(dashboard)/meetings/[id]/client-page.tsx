@@ -795,12 +795,24 @@ export default function MeetingDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild>
-                <Link href={`/meetings/${id}/notes`}>
+              {meeting.status === "draft" ? (
+                <Button disabled>
                   <FileText className="mr-2 h-4 w-4" />
                   Buka Editor Catatan
-                </Link>
-              </Button>
+                </Button>
+              ) : (
+                <Button asChild>
+                  <Link href={`/meetings/${id}/notes`}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Buka Editor Catatan
+                  </Link>
+                </Button>
+              )}
+              {meeting.status === "draft" && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Klik &quot;Mulai Meeting&quot; terlebih dahulu untuk membuka editor catatan.
+                </p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
