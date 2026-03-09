@@ -56,15 +56,19 @@ class UserController extends Controller
             'phone' => ['nullable', 'string', 'max:20'],
             'position' => ['nullable', 'string', 'max:100'],
             'department' => ['nullable', 'string', 'max:100'],
-            'role' => ['required', 'string', 'exists:roles,name'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['string', 'exists:roles,name'],
         ]);
+
+        $roles = $validated['roles'];
+        unset($validated['roles']);
 
         $user = User::create([
             ...$validated,
             'password' => Hash::make($validated['password']),
         ]);
 
-        $user->assignRole($validated['role']);
+        $user->syncRoles($roles);
 
         return response()->json([
             'success' => true,
@@ -91,7 +95,8 @@ class UserController extends Controller
             'position' => ['nullable', 'string', 'max:100'],
             'department' => ['nullable', 'string', 'max:100'],
             'is_active' => ['nullable', 'boolean'],
-            'role' => ['nullable', 'string', 'exists:roles,name'],
+            'roles' => ['nullable', 'array', 'min:1'],
+            'roles.*' => ['string', 'exists:roles,name'],
         ]);
 
         if (! empty($validated['password'])) {
@@ -100,13 +105,13 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
-        $role = $validated['role'] ?? null;
-        unset($validated['role']);
+        $roles = $validated['roles'] ?? null;
+        unset($validated['roles']);
 
         $user->update($validated);
 
-        if ($role) {
-            $user->syncRoles([$role]);
+        if ($roles) {
+            $user->syncRoles($roles);
         }
 
         return response()->json([

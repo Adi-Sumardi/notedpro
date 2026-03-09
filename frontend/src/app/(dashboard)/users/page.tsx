@@ -15,13 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -49,7 +42,7 @@ interface UserFormData {
   phone: string;
   position: string;
   department: string;
-  role: string;
+  roles: string[];
 }
 
 const emptyForm: UserFormData = {
@@ -59,8 +52,17 @@ const emptyForm: UserFormData = {
   phone: "",
   position: "",
   department: "",
-  role: "staff",
+  roles: ["staff"],
 };
+
+const availableRoles = [
+  { value: "super-admin", label: "Super Admin" },
+  { value: "admin", label: "Admin" },
+  { value: "noter", label: "Noter (Notulis)" },
+  { value: "kabag", label: "Kabag" },
+  { value: "sdm", label: "SDM" },
+  { value: "staff", label: "Staff" },
+];
 
 function useUsers() {
   return useQuery({
@@ -137,7 +139,7 @@ export default function UsersPage() {
       phone: user.phone ?? "",
       position: user.position ?? "",
       department: user.department ?? "",
-      role: user.roles?.[0] ?? "staff",
+      roles: user.roles?.length ? user.roles : ["staff"],
     });
     setDialogOpen(true);
   };
@@ -145,6 +147,10 @@ export default function UsersPage() {
   const handleSubmit = async () => {
     if (!form.name.trim() || !form.email.trim()) {
       toast.error("Nama dan email wajib diisi");
+      return;
+    }
+    if (form.roles.length === 0) {
+      toast.error("Pilih minimal satu role");
       return;
     }
 
@@ -235,9 +241,13 @@ export default function UsersPage() {
                     {user.department ?? "-"}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="capitalize">
-                      {user.roles?.[0] ?? "staff"}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {(user.roles?.length ? user.roles : ["staff"]).map((role) => (
+                        <Badge key={role} variant="outline" className="capitalize">
+                          {role}
+                        </Badge>
+                      ))}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {user.is_active ? (
@@ -377,24 +387,37 @@ export default function UsersPage() {
               />
             </div>
 
-            {/* Role */}
+            {/* Roles */}
             <div className="grid gap-2">
-              <Label htmlFor="user_role">Role</Label>
-              <Select
-                value={form.role}
-                onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, role: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="super-admin">Super Admin</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Role <span className="text-red-500">*</span></Label>
+              <p className="text-xs text-muted-foreground">Bisa pilih lebih dari satu role.</p>
+              <div className="grid grid-cols-2 gap-2">
+                {availableRoles.map((role) => (
+                  <label
+                    key={role.value}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+                      form.roles.includes(role.value)
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.roles.includes(role.value)}
+                      onChange={(e) => {
+                        setForm((prev) => ({
+                          ...prev,
+                          roles: e.target.checked
+                            ? [...prev.roles, role.value]
+                            : prev.roles.filter((r) => r !== role.value),
+                        }));
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm">{role.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
 
