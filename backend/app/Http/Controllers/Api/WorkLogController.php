@@ -122,7 +122,7 @@ class WorkLogController extends Controller
         return response()->json([
             'success' => true,
             'data' => new DailyWorkLogResource($log),
-            'message' => 'Laporan harian berhasil diajukan untuk review.',
+            'message' => 'Laporan harian berhasil dilaporkan untuk review.',
         ]);
     }
 
@@ -147,14 +147,14 @@ class WorkLogController extends Controller
             abort(404);
         }
 
-        $disk = Storage::disk('public');
         $path = $attachment->file_path;
         $name = $attachment->original_name ?? basename($path);
+        $mime = $attachment->mime_type ?? 'application/octet-stream';
 
-        return response()->streamDownload(function () use ($disk, $path) {
-            echo $disk->get($path);
+        return response()->streamDownload(function () use ($path) {
+            echo Storage::disk('public')->get($path);
         }, $name, [
-            'Content-Type' => $disk->mimeType($path),
+            'Content-Type' => $mime,
         ]);
     }
 }

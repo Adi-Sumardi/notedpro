@@ -212,7 +212,7 @@ export default function NewWorkLogPage() {
       const result = await createWorkLog.mutateAsync(payload);
       if (submitAfter && result?.data?.id) {
         await api.patch(`/api/v1/work-logs/${result.data.id}/submit`);
-        toast.success("Laporan berhasil dibuat dan diajukan!");
+        toast.success("Laporan berhasil dibuat dan dilaporkan!");
       } else {
         toast.success("Laporan harian berhasil disimpan sebagai draft.");
       }
@@ -549,7 +549,7 @@ export default function NewWorkLogPage() {
             {(isSubmitting || createWorkLog.isPending) && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Simpan & Ajukan
+            Simpan & Laporkan
           </Button>
           <Button
             type="button"

@@ -262,7 +262,7 @@ export default function EditWorkLogPage() {
       await updateWorkLog.mutateAsync(payload);
       if (submitAfter) {
         await api.patch(`/api/v1/work-logs/${id}/submit`);
-        toast.success("Laporan berhasil diperbarui dan diajukan!");
+        toast.success("Laporan berhasil diperbarui dan dilaporkan!");
       } else {
         toast.success("Laporan berhasil diperbarui.");
       }
@@ -684,7 +684,7 @@ export default function EditWorkLogPage() {
             {(isSubmitting || updateWorkLog.isPending) && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Simpan & Ajukan
+            Simpan & Laporkan
           </Button>
           <Button
             type="button"

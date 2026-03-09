@@ -134,7 +134,7 @@ export default function WorkLogDetailPage() {
   async function handleSubmit() {
     try {
       await submitLog.mutateAsync();
-      toast.success("Laporan berhasil diajukan!");
+      toast.success("Laporan berhasil dilaporkan!");
     } catch {
       toast.error("Gagal mengajukan laporan.");
     }
@@ -220,7 +220,7 @@ export default function WorkLogDetailPage() {
                 ) : (
                   <Send className="mr-1.5 h-4 w-4" />
                 )}
-                Ajukan
+                Laporkan
               </Button>
             )}
             {canDelete && (

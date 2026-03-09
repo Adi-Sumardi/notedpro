@@ -43,7 +43,7 @@ const statusColorMap: Record<WorkLogStatus, string> = {
 const statusOptions: { value: string; label: string }[] = [
   { value: "all", label: "Semua Status" },
   { value: "draft", label: "Draft" },
-  { value: "submitted", label: "Diajukan" },
+  { value: "submitted", label: "Dilaporkan" },
   { value: "approved", label: "Disetujui" },
   { value: "rejected", label: "Ditolak" },
 ];

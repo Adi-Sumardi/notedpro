@@ -13,7 +13,7 @@ enum WorkLogStatus: string
     {
         return match ($this) {
             self::Draft => 'Draft',
-            self::Submitted => 'Diajukan',
+            self::Submitted => 'Dilaporkan',
             self::Approved => 'Disetujui',
             self::Rejected => 'Ditolak',
         };
