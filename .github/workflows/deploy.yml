@@ -39,8 +39,8 @@ jobs:
           source: "backend/"
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id/app"
           overwrite: true
-          timeout: 120s
-          command_timeout: 10m
+          timeout: 300s
+          command_timeout: 15m
 
       - name: Upload frontend static files via SCP
         uses: appleboy/scp-action@v0.1.7
@@ -53,8 +53,8 @@ jobs:
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id/public_html"
           strip_components: 2
           overwrite: true
-          timeout: 120s
-          command_timeout: 10m
+          timeout: 300s
+          command_timeout: 15m
 
       - name: Upload deploy files
         uses: appleboy/scp-action@v0.1.7
@@ -66,8 +66,8 @@ jobs:
           source: "deploy/"
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id"
           overwrite: true
-          timeout: 120s
-          command_timeout: 10m
+          timeout: 300s
+          command_timeout: 15m
 
       - name: Setup backend & finalize deployment
         uses: appleboy/ssh-action@v1
@@ -76,8 +76,8 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          timeout: 120s
-          command_timeout: 10m
+          timeout: 300s
+          command_timeout: 15m
           envs: DB_DATABASE,DB_USERNAME,DB_PASSWORD,MAIL_HOST,MAIL_PORT,MAIL_USERNAME,MAIL_PASSWORD,WATZAP_API_KEY,WATZAP_NUMBER_KEY
           script: |
             set -e
