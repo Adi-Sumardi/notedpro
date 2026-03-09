@@ -124,7 +124,7 @@ export default function WorkLogDetailPage() {
     );
   }
 
-  const isOwner = user?.id === log.user?.id;
+  const isOwner = Number(user?.id) === Number(log.user?.id);
   const canEdit =
     isOwner && (log.status === "draft" || log.status === "rejected");
   const canSubmit = canEdit;
@@ -324,76 +324,85 @@ export default function WorkLogDetailPage() {
       </Card>
 
       {/* Attachments */}
-      {log.attachments && log.attachments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Lampiran</CardTitle>
-            <CardDescription>
-              {log.attachments.length} lampiran
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {log.attachments
-              .filter((a) => a.type === "file")
-              .map((att) => (
-                <div
-                  key={att.id}
-                  className="flex items-center gap-3 rounded-lg border px-3 py-2"
-                >
-                  {getFileIcon(att.original_name ?? "file")}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">
-                      {att.original_name}
-                    </p>
-                    {att.file_size && (
-                      <p className="text-xs text-muted-foreground">
-                        {(att.file_size / 1024 / 1024).toFixed(2)} MB
+      <Card>
+        <CardHeader>
+          <CardTitle>Lampiran</CardTitle>
+          <CardDescription>
+            {(log.attachments?.length ?? 0) > 0
+              ? `${log.attachments!.length} lampiran`
+              : "Belum ada lampiran"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {(!log.attachments || log.attachments.length === 0) ? (
+            <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+              <FileText className="h-8 w-8 mb-2" />
+              <p className="text-sm">Tidak ada file atau link yang dilampirkan.</p>
+            </div>
+          ) : (
+            <>
+              {log.attachments
+                .filter((a) => a.type === "file")
+                .map((att) => (
+                  <div
+                    key={att.id}
+                    className="flex items-center gap-3 rounded-lg border px-3 py-2"
+                  >
+                    {getFileIcon(att.original_name ?? "file")}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {att.original_name}
                       </p>
+                      {att.file_size && (
+                        <p className="text-xs text-muted-foreground">
+                          {(att.file_size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      )}
+                    </div>
+                    {att.file_url && (
+                      <a
+                        href={att.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted shrink-0"
+                      >
+                        <Download className="h-4 w-4" />
+                        Unduh
+                      </a>
                     )}
                   </div>
-                  {att.file_url && (
+                ))}
+              {log.attachments
+                .filter((a) => a.type === "link")
+                .map((att) => (
+                  <div
+                    key={att.id}
+                    className="flex items-center gap-3 rounded-lg border px-3 py-2"
+                  >
+                    <Link2 className="h-5 w-5 text-blue-500 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {att.label || att.url}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {att.url}
+                      </p>
+                    </div>
                     <a
-                      href={att.file_url}
+                      href={att.url ?? "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted shrink-0"
                     >
-                      <Download className="h-4 w-4" />
-                      Unduh
+                      <ExternalLink className="h-4 w-4" />
+                      Buka
                     </a>
-                  )}
-                </div>
-              ))}
-            {log.attachments
-              .filter((a) => a.type === "link")
-              .map((att) => (
-                <div
-                  key={att.id}
-                  className="flex items-center gap-3 rounded-lg border px-3 py-2"
-                >
-                  <Link2 className="h-5 w-5 text-blue-500 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">
-                      {att.label || att.url}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {att.url}
-                    </p>
                   </div>
-                  <a
-                    href={att.url ?? "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted shrink-0"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Buka
-                  </a>
-                </div>
-              ))}
-          </CardContent>
-        </Card>
-      )}
+                ))}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Review Info */}
       {log.reviewed_at && (
