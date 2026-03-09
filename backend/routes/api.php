@@ -79,6 +79,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('work-logs', WorkLogController::class);
         Route::patch('work-logs/{work_log}/submit', [WorkLogController::class, 'submit']);
         Route::patch('work-logs/{work_log}/review', [WorkLogController::class, 'review']);
+        Route::get('work-log-attachments/{attachment}/download', [WorkLogController::class, 'downloadAttachment']);
 
         // External Contacts
         Route::apiResource('external-contacts', ExternalContactController::class)

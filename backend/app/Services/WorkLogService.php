@@ -8,7 +8,9 @@ use App\Models\User;
 use App\Notifications\WorkLogReviewed;
 use App\Notifications\WorkLogSubmitted;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class WorkLogService
 {
@@ -53,9 +55,9 @@ class WorkLogService
         return $query->paginate($filters['per_page'] ?? 20);
     }
 
-    public function create(array $data, User $user): DailyWorkLog
+    public function create(array $data, User $user, array $files = [], array $links = []): DailyWorkLog
     {
-        return DB::transaction(function () use ($data, $user) {
+        return DB::transaction(function () use ($data, $user, $files, $links) {
             $log = DailyWorkLog::create([
                 'user_id' => $user->id,
                 'log_date' => $data['log_date'],
@@ -67,13 +69,15 @@ class WorkLogService
                 $log->items()->create($item);
             }
 
-            return $log->load(['user', 'items']);
+            $this->storeAttachments($log, $files, $links);
+
+            return $log->load(['user', 'items', 'attachments']);
         });
     }
 
-    public function update(DailyWorkLog $log, array $data): DailyWorkLog
+    public function update(DailyWorkLog $log, array $data, array $files = [], array $links = [], ?array $keepIds = null): DailyWorkLog
     {
-        return DB::transaction(function () use ($log, $data) {
+        return DB::transaction(function () use ($log, $data, $files, $links, $keepIds) {
             $updateData = [
                 'notes' => $data['notes'] ?? $log->notes,
             ];
@@ -115,7 +119,20 @@ class WorkLogService
                 }
             }
 
-            return $log->load(['user', 'items']);
+            // Remove attachments not in keepIds
+            if ($keepIds !== null) {
+                $toDelete = $log->attachments()->whereNotIn('id', $keepIds)->get();
+                foreach ($toDelete as $att) {
+                    if ($att->type === 'file' && $att->file_path) {
+                        Storage::disk('public')->delete($att->file_path);
+                    }
+                    $att->delete();
+                }
+            }
+
+            $this->storeAttachments($log, $files, $links);
+
+            return $log->load(['user', 'items', 'attachments']);
         });
     }
 
@@ -133,7 +150,7 @@ class WorkLogService
                 $manager->notify(new WorkLogSubmitted($log));
             }
 
-            return $log->load(['user', 'items']);
+            return $log->load(['user', 'items', 'attachments']);
         });
     }
 
@@ -149,7 +166,30 @@ class WorkLogService
 
             $log->user->notify(new WorkLogReviewed($log));
 
-            return $log->load(['user', 'reviewer', 'items']);
+            return $log->load(['user', 'reviewer', 'items', 'attachments']);
         });
+    }
+
+    private function storeAttachments(DailyWorkLog $log, array $files, array $links): void
+    {
+        /** @var UploadedFile $file */
+        foreach ($files as $file) {
+            $path = $file->store('work-logs/attachments', 'public');
+            $log->attachments()->create([
+                'type' => 'file',
+                'file_path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getClientMimeType(),
+                'file_size' => $file->getSize(),
+            ]);
+        }
+
+        foreach ($links as $link) {
+            $log->attachments()->create([
+                'type' => 'link',
+                'url' => $link['url'],
+                'label' => $link['label'] ?? null,
+            ]);
+        }
     }
 }

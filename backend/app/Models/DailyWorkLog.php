@@ -49,6 +49,11 @@ class DailyWorkLog extends Model
         return $this->hasMany(WorkLogItem::class);
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(WorkLogAttachment::class);
+    }
+
     public function isDraft(): bool
     {
         return $this->status === WorkLogStatus::Draft;

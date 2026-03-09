@@ -1,7 +1,7 @@
 {
-  "name": "Simonik - Sistem Monitoring Notulensi dan Kolaborasi",
+  "name": "Simonik - Sistem Manajemen Notulensi dan Kolaborasi",
   "short_name": "Simonik",
-  "description": "Sistem Monitoring Notulensi dan Kolaborasi",
+  "description": "Sistem Manajemen Notulensi dan Kolaborasi",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

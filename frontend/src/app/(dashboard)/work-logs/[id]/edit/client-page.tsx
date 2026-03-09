@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/layout/PageHeader";
 import { useRouteId } from "@/hooks/useRouteId";
@@ -11,6 +11,7 @@ import { z } from "zod";
 import { useWorkLog, useUpdateWorkLog } from "@/hooks/useWorkLogs";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import type { WorkLogAttachment } from "@/types/api";
 
 import {
   Card,
@@ -31,7 +32,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+  FileText,
+  Image as ImageIcon,
+  FileSpreadsheet,
+  Presentation,
+  X,
+  Link2,
+  ExternalLink,
+} from "lucide-react";
 
 const categoryOptions = [
   { value: "meeting", label: "Rapat/Meeting" },
@@ -41,6 +54,29 @@ const categoryOptions = [
   { value: "communication", label: "Komunikasi/Koordinasi" },
   { value: "other", label: "Lainnya" },
 ] as const;
+
+const ACCEPTED_FILE_TYPES =
+  ".pdf,.doc,.docx,.xls,.xlsx,.pptx,.jpg,.jpeg,.png";
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+function getFileIcon(name: string) {
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (ext === "pdf") return <FileText className="h-5 w-5 text-red-500" />;
+  if (["doc", "docx"].includes(ext ?? ""))
+    return <FileText className="h-5 w-5 text-blue-500" />;
+  if (["xls", "xlsx"].includes(ext ?? ""))
+    return <FileSpreadsheet className="h-5 w-5 text-green-600" />;
+  if (ext === "pptx")
+    return <Presentation className="h-5 w-5 text-orange-500" />;
+  if (["jpg", "jpeg", "png"].includes(ext ?? ""))
+    return <ImageIcon className="h-5 w-5 text-purple-500" />;
+  return <FileText className="h-5 w-5 text-gray-500" />;
+}
+
+interface LinkItem {
+  url: string;
+  label: string;
+}
 
 const workLogSchema = z.object({
   log_date: z.string().min(1, "Tanggal wajib diisi"),
@@ -72,9 +108,17 @@ export default function EditWorkLogPage() {
   const routeId = useRouteId();
   const router = useRouter();
   const id = Number(routeId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: log, isLoading } = useWorkLog(id);
   const updateWorkLog = useUpdateWorkLog(id);
+
+  const [existingAttachments, setExistingAttachments] = useState<WorkLogAttachment[]>([]);
+  const [existingLinks, setExistingLinks] = useState<WorkLogAttachment[]>([]);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [newLinks, setNewLinks] = useState<LinkItem[]>([]);
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [newLinkLabel, setNewLinkLabel] = useState("");
 
   const {
     register,
@@ -116,12 +160,104 @@ export default function EditWorkLogPage() {
           progress: item.progress,
         })),
       });
+      const attachments = log.attachments ?? [];
+      setExistingAttachments(attachments.filter((a) => a.type === "file"));
+      setExistingLinks(attachments.filter((a) => a.type === "link"));
     }
   }, [log, reset, id, router]);
 
+  function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files ?? []);
+    const valid = selected.filter((f) => {
+      if (f.size > MAX_FILE_SIZE) {
+        toast.error(`${f.name} melebihi batas 10MB`);
+        return false;
+      }
+      return true;
+    });
+    setNewFiles((prev) => [...prev, ...valid]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function removeNewFile(index: number) {
+    setNewFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function removeExistingAttachment(attId: number) {
+    setExistingAttachments((prev) => prev.filter((a) => a.id !== attId));
+  }
+
+  function removeExistingLink(attId: number) {
+    setExistingLinks((prev) => prev.filter((a) => a.id !== attId));
+  }
+
+  function addLink() {
+    if (!newLinkUrl.trim()) {
+      toast.error("URL wajib diisi");
+      return;
+    }
+    try {
+      new URL(newLinkUrl);
+    } catch {
+      toast.error("Format URL tidak valid");
+      return;
+    }
+    setNewLinks((prev) => [
+      ...prev,
+      { url: newLinkUrl.trim(), label: newLinkLabel.trim() || newLinkUrl.trim() },
+    ]);
+    setNewLinkUrl("");
+    setNewLinkLabel("");
+  }
+
+  function removeNewLink(index: number) {
+    setNewLinks((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function buildFormData(values: WorkLogFormValues): FormData {
+    const fd = new FormData();
+    fd.append("log_date", values.log_date);
+    if (values.notes) fd.append("notes", values.notes);
+
+    values.items.forEach((item, i) => {
+      if (item.id) fd.append(`items[${i}][id]`, String(item.id));
+      fd.append(`items[${i}][description]`, item.description);
+      fd.append(`items[${i}][category]`, item.category);
+      fd.append(`items[${i}][start_time]`, item.start_time);
+      fd.append(`items[${i}][end_time]`, item.end_time);
+      fd.append(`items[${i}][progress]`, String(item.progress));
+    });
+
+    const keepIds = [
+      ...existingAttachments.map((a) => a.id),
+      ...existingLinks.map((a) => a.id),
+    ];
+    keepIds.forEach((kid) => {
+      fd.append("existing_attachment_ids[]", String(kid));
+    });
+
+    newFiles.forEach((file) => {
+      fd.append("attachments[]", file);
+    });
+
+    newLinks.forEach((link, i) => {
+      fd.append(`links[${i}][url]`, link.url);
+      if (link.label) fd.append(`links[${i}][label]`, link.label);
+    });
+
+    return fd;
+  }
+
   async function onSubmit(values: WorkLogFormValues, submitAfter = false) {
     try {
-      await updateWorkLog.mutateAsync(values);
+      const hasAttachments =
+        newFiles.length > 0 ||
+        newLinks.length > 0 ||
+        existingAttachments.length !== (log?.attachments?.filter((a) => a.type === "file").length ?? 0) ||
+        existingLinks.length !== (log?.attachments?.filter((a) => a.type === "link").length ?? 0);
+
+      const payload = hasAttachments ? buildFormData(values) : values;
+      await updateWorkLog.mutateAsync(payload);
       if (submitAfter) {
         await api.patch(`/api/v1/work-logs/${id}/submit`);
         toast.success("Laporan berhasil diperbarui dan diajukan!");
@@ -246,7 +382,6 @@ export default function EditWorkLogPage() {
                   )}
                 </div>
 
-                {/* Hidden id for existing items */}
                 <input
                   type="hidden"
                   {...register(`items.${index}.id`)}
@@ -321,6 +456,209 @@ export default function EditWorkLogPage() {
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* Attachments Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Lampiran</CardTitle>
+            <CardDescription>
+              Upload file pendukung atau tambahkan link dokumen online.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* File Upload */}
+            <div className="space-y-3">
+              <Label>File</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_FILE_TYPES}
+                multiple
+                className="hidden"
+                onChange={handleFilesSelected}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-4 w-4" />
+                Pilih File
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Format: PDF, Word, Excel, PowerPoint, JPEG, PNG. Maks 10MB per file.
+              </p>
+
+              {/* Existing files */}
+              {existingAttachments.length > 0 && (
+                <div className="space-y-2">
+                  {existingAttachments.map((att) => (
+                    <div
+                      key={att.id}
+                      className="flex items-center gap-3 rounded-lg border px-3 py-2"
+                    >
+                      {getFileIcon(att.original_name ?? "file")}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">
+                          {att.original_name}
+                        </p>
+                        {att.file_size && (
+                          <p className="text-xs text-muted-foreground">
+                            {(att.file_size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeExistingAttachment(att.id)}
+                        className="rounded-full p-1 hover:bg-muted shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* New files */}
+              {newFiles.length > 0 && (
+                <div className="space-y-2">
+                  {newFiles.map((file, i) => (
+                    <div
+                      key={`new-${file.name}-${i}`}
+                      className="flex items-center gap-3 rounded-lg border border-dashed border-green-300 bg-green-50 px-3 py-2"
+                    >
+                      {getFileIcon(file.name)}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB (baru)
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeNewFile(i)}
+                        className="rounded-full p-1 hover:bg-muted shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Link Attachments */}
+            <div className="space-y-3">
+              <Label>Link Dokumen</Label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  placeholder="https://docs.google.com/..."
+                  value={newLinkUrl}
+                  onChange={(e) => setNewLinkUrl(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Label (opsional)"
+                  value={newLinkLabel}
+                  onChange={(e) => setNewLinkLabel(e.target.value)}
+                  className="sm:w-48"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addLink}
+                  className="shrink-0 w-full sm:w-auto gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tambah
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Spreadsheet, Google Docs, Canva, atau link lainnya.
+              </p>
+
+              {/* Existing links */}
+              {existingLinks.length > 0 && (
+                <div className="space-y-2">
+                  {existingLinks.map((att) => (
+                    <div
+                      key={att.id}
+                      className="flex items-center gap-3 rounded-lg border px-3 py-2"
+                    >
+                      <Link2 className="h-5 w-5 text-blue-500 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">
+                          {att.label || att.url}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {att.url}
+                        </p>
+                      </div>
+                      <a
+                        href={att.url ?? "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-full p-1 hover:bg-muted shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => removeExistingLink(att.id)}
+                        className="rounded-full p-1 hover:bg-muted shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* New links */}
+              {newLinks.length > 0 && (
+                <div className="space-y-2">
+                  {newLinks.map((link, i) => (
+                    <div
+                      key={`new-${link.url}-${i}`}
+                      className="flex items-center gap-3 rounded-lg border border-dashed border-green-300 bg-green-50 px-3 py-2"
+                    >
+                      <Link2 className="h-5 w-5 text-blue-500 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">
+                          {link.label} (baru)
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {link.url}
+                        </p>
+                      </div>
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-full p-1 hover:bg-muted shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => removeNewLink(i)}
+                        className="rounded-full p-1 hover:bg-muted shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 

@@ -1,5 +1,5 @@
 # LAPORAN PEMBUATAN APLIKASI SIMONIK
-## (Sistem Informasi Monitoring Notulensi dan Kolaborasi)
+## (Sistem Informasi Manajemen Notulensi dan Kolaborasi)
 
 **Versi Dokumen:** 1.0
 **Tanggal:** 6 Maret 2026
@@ -27,7 +27,7 @@
 
 ## 1. PENDAHULUAN
 
-SIMONIK (Sistem Informasi Monitoring Notulensi dan Kolaborasi) adalah aplikasi berbasis web yang dirancang untuk mengelola notulensi rapat, menindaklanjuti hasil rapat menjadi tugas yang terukur, dan memonitor penyelesaian tugas secara real-time melalui dashboard interaktif.
+SIMONIK (Sistem Informasi Manajemen Notulensi dan Kolaborasi) adalah aplikasi berbasis web yang dirancang untuk mengelola notulensi rapat, menindaklanjuti hasil rapat menjadi tugas yang terukur, dan memonitor penyelesaian tugas secara real-time melalui dashboard interaktif.
 
 Aplikasi ini lahir dari kebutuhan organisasi untuk memastikan bahwa setiap keputusan dan poin penting dalam rapat tidak hanya tercatat, tetapi juga ditindaklanjuti hingga selesai. Dengan fitur highlight-to-follow-up yang inovatif, pengguna cukup menyorot teks penting di notulensi dan langsung mengubahnya menjadi tugas yang dapat ditugaskan kepada anggota tim.
 

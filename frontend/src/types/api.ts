@@ -158,6 +158,18 @@ export type WorkCategory =
   | "communication"
   | "other";
 
+export interface WorkLogAttachment {
+  id: number;
+  type: "file" | "link";
+  file_url: string | null;
+  original_name: string | null;
+  mime_type: string | null;
+  file_size: number | null;
+  url: string | null;
+  label: string | null;
+  created_at: string;
+}
+
 export interface DailyWorkLog {
   id: number;
   log_date: string;
@@ -171,6 +183,7 @@ export interface DailyWorkLog {
   reviewer: User | null;
   items: WorkLogItem[];
   items_count?: number;
+  attachments?: WorkLogAttachment[];
   created_at: string;
   updated_at: string;
 }

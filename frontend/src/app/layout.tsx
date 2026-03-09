@@ -15,8 +15,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Simonik | Sistem Monitoring Notulensi dan Kolaborasi",
-  description: "Sistem Monitoring Notulensi dan Kolaborasi",
+  title: "Simonik | Sistem Manajemen Notulensi dan Kolaborasi",
+  description: "Sistem Manajemen Notulensi dan Kolaborasi",
   manifest: "/manifest.json",
   icons: {
     icon: [

@@ -33,8 +33,12 @@ export function useWorkLog(id: number) {
 export function useCreateWorkLog() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
-      const { data } = await api.post("/api/v1/work-logs", payload);
+    mutationFn: async (payload: FormData | Record<string, unknown>) => {
+      const { data } = await api.post("/api/v1/work-logs", payload, {
+        headers: payload instanceof FormData
+          ? { "Content-Type": "multipart/form-data" }
+          : undefined,
+      });
       return data;
     },
     onSuccess: () => {
@@ -46,7 +50,15 @@ export function useCreateWorkLog() {
 export function useUpdateWorkLog(id: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
+    mutationFn: async (payload: FormData | Record<string, unknown>) => {
+      // Laravel needs _method=PUT for FormData via POST
+      if (payload instanceof FormData) {
+        payload.append("_method", "PUT");
+        const { data } = await api.post(`/api/v1/work-logs/${id}`, payload, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        return data;
+      }
       const { data } = await api.put(`/api/v1/work-logs/${id}`, payload);
       return data;
     },

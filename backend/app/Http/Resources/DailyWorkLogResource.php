@@ -22,6 +22,7 @@ class DailyWorkLogResource extends JsonResource
             'reviewer' => new UserResource($this->whenLoaded('reviewer')),
             'items' => WorkLogItemResource::collection($this->whenLoaded('items')),
             'items_count' => $this->whenCounted('items'),
+            'attachments' => WorkLogAttachmentResource::collection($this->whenLoaded('attachments')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

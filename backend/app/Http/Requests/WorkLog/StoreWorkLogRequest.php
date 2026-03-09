@@ -24,6 +24,15 @@ class StoreWorkLogRequest extends FormRequest
             'items.*.start_time' => ['required', 'date_format:H:i'],
             'items.*.end_time' => ['required', 'date_format:H:i', 'after:items.*.start_time'],
             'items.*.progress' => ['required', 'integer', 'min:0', 'max:100'],
+
+            // File attachments
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,pptx,jpg,jpeg,png', 'max:10240'],
+
+            // Link attachments
+            'links' => ['nullable', 'array'],
+            'links.*.url' => ['required', 'url', 'max:2048'],
+            'links.*.label' => ['nullable', 'string', 'max:255'],
         ];
     }
 

@@ -77,7 +77,7 @@ export default function LoginPage() {
         <img src="/logo.png" alt="Simonik" className="h-16 w-16 rounded-xl shadow-lg" />
         <h1 className="mt-3 text-2xl font-bold text-[#063E66]">Simonik</h1>
         <p className="text-sm text-muted-foreground">
-          Sistem Monitoring Notulensi dan Kolaborasi
+          Sistem Manajemen Notulensi dan Kolaborasi
         </p>
       </div>
 
