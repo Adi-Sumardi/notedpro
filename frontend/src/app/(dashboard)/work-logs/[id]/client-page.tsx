@@ -66,6 +66,7 @@ const categoryColorMap: Record<string, string> = {
   administrative: "bg-gray-100 text-gray-700",
   research: "bg-yellow-100 text-yellow-700",
   communication: "bg-green-100 text-green-700",
+  monitoring: "bg-orange-100 text-orange-700",
   other: "bg-gray-100 text-gray-600",
 };
 

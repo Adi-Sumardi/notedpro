@@ -48,6 +48,7 @@ const categoryOptions = [
   { value: "administrative", label: "Administrasi" },
   { value: "research", label: "Riset/Penelitian" },
   { value: "communication", label: "Komunikasi/Koordinasi" },
+  { value: "monitoring", label: "Monitoring/Evaluasi" },
   { value: "other", label: "Lainnya" },
 ] as const;
 
@@ -87,6 +88,7 @@ const workLogSchema = z.object({
           "administrative",
           "research",
           "communication",
+          "monitoring",
           "other",
         ]),
         start_time: z.string().min(1, "Waktu mulai wajib diisi"),
