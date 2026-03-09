@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\TaskCommentController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\HrReportController;
 use App\Http\Controllers\Api\WorkLogController;
 use Illuminate\Support\Facades\Route;
 
@@ -74,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Tasks
         Route::apiResource('tasks', TaskController::class);
         Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus']);
+        Route::patch('tasks/{task}/verify', [TaskController::class, 'verifyTask']);
 
         // Task Attachments
         Route::post('tasks/{task}/attachments', [TaskController::class, 'uploadAttachments']);
@@ -88,6 +90,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('dashboard/summary', [DashboardController::class, 'summary'])
             ->middleware('permission:view-dashboard');
         Route::get('dashboard/my-summary', [DashboardController::class, 'mySummary']);
+
+        // HR Report (SDM)
+        Route::middleware('permission:view-hr-report')->group(function () {
+            Route::get('hr-report', [HrReportController::class, 'index']);
+            Route::get('hr-report/departments', [HrReportController::class, 'departments']);
+        });
 
         // Work Logs (Laporan Harian)
         Route::apiResource('work-logs', WorkLogController::class);

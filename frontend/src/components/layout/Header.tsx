@@ -12,6 +12,7 @@ import {
   CheckSquare,
   Users,
   ClipboardPenLine,
+  BarChart3,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -71,7 +72,13 @@ const navItems: NavItem[] = [
     label: "All Tasks",
     href: "/tasks",
     icon: CheckSquare,
-    roles: ["admin", "super-admin"],
+    roles: ["admin", "super-admin", "kabag"],
+  },
+  {
+    label: "Rekap Kinerja",
+    href: "/hr-report",
+    icon: BarChart3,
+    roles: ["admin", "super-admin", "sdm"],
   },
   {
     label: "Users",

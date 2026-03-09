@@ -55,6 +55,21 @@ export function useUpdateTaskStatus(id: number) {
   });
 }
 
+export function useVerifyTask(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { status: "done" | "in_progress"; comment?: string }) => {
+      const { data } = await api.patch(`/api/v1/tasks/${id}/verify`, payload);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["tasks", id] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 export function useAddComment(taskId: number) {
   const qc = useQueryClient();
   return useMutation({

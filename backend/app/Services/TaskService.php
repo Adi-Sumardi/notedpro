@@ -19,8 +19,9 @@ class TaskService
     {
         $query = Task::with(['assignee', 'assigner', 'followUpItem.meeting']);
 
-        // Staff only sees their own tasks
-        if (! $user->hasAnyRole(['super-admin', 'admin'])) {
+        // SDM/Kabag with view-all-tasks or view-team-tasks can see all tasks
+        // Others only see their own
+        if (! $user->hasAnyRole(['super-admin', 'admin']) && ! $user->can('view-all-tasks') && ! $user->can('view-team-tasks')) {
             $query->where('assigned_to', $user->id);
         }
 
@@ -132,6 +133,56 @@ class TaskService
 
             // Notify assigner about status change
             $task->assigner->notify(new TaskStatusChanged($task, $oldStatus, $newStatus));
+
+            return $task->load(['assignee', 'assigner', 'followUpItem.meeting']);
+        });
+    }
+
+    public function verifyTask(Task $task, string $newStatus, User $verifier, ?string $comment = null): Task
+    {
+        return DB::transaction(function () use ($task, $newStatus, $verifier, $comment) {
+            $oldStatus = $task->status->value;
+
+            $task->status = $newStatus;
+
+            if ($newStatus === TaskStatus::Done->value) {
+                $task->completed_at = now();
+
+                $allDone = $task->followUpItem->tasks()
+                    ->where('id', '!=', $task->id)
+                    ->where('status', '!=', TaskStatus::Done)
+                    ->doesntExist();
+
+                if ($allDone) {
+                    $task->followUpItem->update(['status' => FollowUpStatus::Done]);
+                }
+            }
+
+            $task->save();
+
+            $action = $newStatus === TaskStatus::Done->value ? 'verified' : 'rejected';
+
+            TaskActivity::create([
+                'task_id' => $task->id,
+                'user_id' => $verifier->id,
+                'action' => $action,
+                'old_value' => $oldStatus,
+                'new_value' => $newStatus,
+            ]);
+
+            // Store verify comment as task comment
+            if ($comment) {
+                $task->comments()->create([
+                    'user_id' => $verifier->id,
+                    'content' => "[{$action}] {$comment}",
+                ]);
+            }
+
+            // Notify assignee and assigner
+            $task->assignee->notify(new TaskStatusChanged($task, $oldStatus, $newStatus));
+            if ($task->assigner->id !== $verifier->id) {
+                $task->assigner->notify(new TaskStatusChanged($task, $oldStatus, $newStatus));
+            }
 
             return $task->load(['assignee', 'assigner', 'followUpItem.meeting']);
         });

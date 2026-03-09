@@ -44,7 +44,9 @@ import {
   useAddComment,
   useUploadTaskAttachments,
   useDeleteTaskAttachment,
+  useVerifyTask,
 } from "@/hooks/useTasks";
+import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
 import type { TaskStatus, TaskAttachment } from "@/types/api";
 
@@ -146,11 +148,16 @@ export default function TaskDetailPage() {
 
   const { data: task, isLoading } = useTask(taskId);
   const updateStatus = useUpdateTaskStatus(taskId);
+  const verifyTask = useVerifyTask(taskId);
   const addComment = useAddComment(taskId);
   const uploadAttachments = useUploadTaskAttachments(taskId);
   const deleteAttachment = useDeleteTaskAttachment(taskId);
+  const { hasRole } = useAuthStore();
+
+  const canVerify = hasRole("kabag") || hasRole("admin") || hasRole("super-admin");
 
   const [commentText, setCommentText] = useState("");
+  const [verifyComment, setVerifyComment] = useState("");
   const [commentFiles, setCommentFiles] = useState<File[]>([]);
   const commentFileRef = useRef<HTMLInputElement>(null);
   const taskFileRef = useRef<HTMLInputElement>(null);
@@ -201,6 +208,19 @@ export default function TaskDetailPage() {
       toast.success(`${files.length} file berhasil diupload`);
     } catch {
       toast.error("Gagal mengupload file");
+    }
+  };
+
+  const handleVerify = async (status: "done" | "in_progress") => {
+    try {
+      await verifyTask.mutateAsync({
+        status,
+        comment: verifyComment.trim() || undefined,
+      });
+      setVerifyComment("");
+      toast.success(status === "done" ? "Task disetujui" : "Task ditolak, dikembalikan ke In Progress");
+    } catch {
+      toast.error("Gagal memverifikasi task");
     }
   };
 
@@ -373,6 +393,45 @@ export default function TaskDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Verify Section (Kabag/Admin) */}
+          {canVerify && task.status === "review" && (
+            <Card className="border-amber-200 bg-amber-50/50">
+              <CardHeader>
+                <CardTitle className="text-base">Verifikasi Task</CardTitle>
+                <CardDescription>
+                  Task ini menunggu verifikasi. Setujui untuk menyelesaikan atau tolak untuk mengembalikan ke In Progress.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Textarea
+                  placeholder="Komentar verifikasi (opsional)..."
+                  rows={2}
+                  value={verifyComment}
+                  onChange={(e) => setVerifyComment(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleVerify("done")}
+                    disabled={verifyTask.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {verifyTask.isPending ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Setujui (Done)
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleVerify("in_progress")}
+                    disabled={verifyTask.isPending}
+                  >
+                    Tolak (Kembalikan)
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Activity Timeline */}
           {task.activities && task.activities.length > 0 && (

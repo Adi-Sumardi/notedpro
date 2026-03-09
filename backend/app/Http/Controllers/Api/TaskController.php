@@ -109,6 +109,31 @@ class TaskController extends Controller
         ]);
     }
 
+    public function verifyTask(Request $request, Task $task): JsonResponse
+    {
+        $this->authorize('verify', $task);
+
+        $validated = $request->validate([
+            'status' => ['required', 'in:done,in_progress'],
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $task = $this->taskService->verifyTask(
+            $task,
+            $validated['status'],
+            $request->user(),
+            $validated['comment'] ?? null
+        );
+
+        $action = $validated['status'] === 'done' ? 'disetujui' : 'ditolak';
+
+        return response()->json([
+            'success' => true,
+            'data' => new TaskResource($task),
+            'message' => "Task berhasil {$action} oleh Kabag.",
+        ]);
+    }
+
     public function destroy(Task $task): JsonResponse
     {
         $this->authorize('delete', $task);

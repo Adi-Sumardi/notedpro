@@ -13,6 +13,16 @@ class TaskPolicy
             return true;
         }
 
+        // SDM can view all tasks (read-only monitoring)
+        if ($user->can('view-all-tasks')) {
+            return true;
+        }
+
+        // Kabag can view team tasks
+        if ($user->can('view-team-tasks')) {
+            return true;
+        }
+
         return $task->assigned_to === $user->id;
     }
 
@@ -23,6 +33,15 @@ class TaskPolicy
         }
 
         return $user->can('update-task-status') && $task->assigned_to === $user->id;
+    }
+
+    public function verify(User $user, Task $task): bool
+    {
+        if ($user->hasAnyRole(['super-admin', 'admin'])) {
+            return true;
+        }
+
+        return $user->can('verify-task') && $task->status->value === 'review';
     }
 
     public function update(User $user, Task $task): bool

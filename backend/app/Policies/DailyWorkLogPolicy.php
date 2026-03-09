@@ -9,12 +9,12 @@ class DailyWorkLogPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('view-own-work-log') || $user->can('view-team-work-log');
+        return $user->can('view-own-work-log') || $user->can('view-team-work-log') || $user->can('view-all-work-logs');
     }
 
     public function view(User $user, DailyWorkLog $log): bool
     {
-        if ($user->hasAnyRole(['super-admin', 'admin']) || $user->can('view-team-work-log')) {
+        if ($user->hasAnyRole(['super-admin', 'admin']) || $user->can('view-team-work-log') || $user->can('view-all-work-logs')) {
             return true;
         }
 

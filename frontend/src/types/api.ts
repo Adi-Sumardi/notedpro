@@ -211,6 +211,38 @@ export interface WorkLogItem {
   progress: number;
 }
 
+// === HR Report ===
+
+export interface HrEmployeeReport {
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    position: string | null;
+    department: string | null;
+  };
+  tasks: {
+    total: number;
+    completed: number;
+    in_progress: number;
+    review: number;
+    overdue: number;
+    completion_rate: number;
+  };
+  work_logs: {
+    total: number;
+    approved: number;
+  };
+}
+
+export interface HrReportData {
+  period: {
+    from: string;
+    to: string;
+  };
+  employees: HrEmployeeReport[];
+}
+
 export interface Notification {
   id: string;
   type: string;

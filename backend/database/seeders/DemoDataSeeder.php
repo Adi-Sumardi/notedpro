@@ -71,6 +71,24 @@ class DemoDataSeeder extends Seeder
         ]);
         $staff3->assignRole('staff');
 
+        $kabag = User::create([
+            'name' => 'Rizky Kabag',
+            'email' => 'kabag@notedpro.com',
+            'password' => Hash::make('password'),
+            'position' => 'Kepala Bagian',
+            'department' => 'Management',
+        ]);
+        $kabag->assignRole('kabag');
+
+        $sdm = User::create([
+            'name' => 'Maya SDM',
+            'email' => 'sdm@notedpro.com',
+            'password' => Hash::make('password'),
+            'position' => 'Staff SDM',
+            'department' => 'SDM',
+        ]);
+        $sdm->assignRole('sdm');
+
         // Create meetings
         $meeting1 = Meeting::create([
             'title' => 'Weekly Standup Sprint 10',

@@ -19,8 +19,8 @@ class WorkLogService
         $query = DailyWorkLog::with(['user', 'reviewer'])
             ->withCount('items');
 
-        // Staff sees own only, manager/admin sees all
-        if (! $user->hasAnyRole(['super-admin', 'admin']) && ! $user->can('view-team-work-log')) {
+        // Staff sees own only; manager/kabag sees team; sdm/admin sees all
+        if (! $user->hasAnyRole(['super-admin', 'admin']) && ! $user->can('view-team-work-log') && ! $user->can('view-all-work-logs')) {
             $query->where('user_id', $user->id);
         }
 
