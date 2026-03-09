@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouteId } from "@/hooks/useRouteId";
 
 import { useRouter } from "next/navigation";
-import { useMeeting, useUpdateMeetingStatus, useDeleteMeeting, useUpdateParticipantRole, useRemoveParticipant } from "@/hooks/useMeetings";
+import { useMeeting, useUpdateMeetingStatus, useDeleteMeeting, useUpdateParticipantRole, useRemoveParticipant, useUpdateExternalParticipant, useRemoveExternalParticipant } from "@/hooks/useMeetings";
 import { useCreateTask } from "@/hooks/useTasks";
 import { useUsers } from "@/hooks/useUsers";
 import { useAuthStore } from "@/stores/authStore";
@@ -94,6 +94,7 @@ import {
   Video,
   LinkIcon,
   KeyRound,
+  Pencil,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -605,43 +606,213 @@ function ParticipantsList({
 
 function ExternalParticipantsList({
   participants,
+  meetingId,
+  isAdmin,
 }: {
   participants: ExternalContact[];
+  meetingId: number;
+  isAdmin: boolean;
 }) {
+  const updateExtParticipant = useUpdateExternalParticipant(meetingId);
+  const removeExtParticipant = useRemoveExternalParticipant(meetingId);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<ExternalContact | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    organization: "",
+    position: "",
+  });
+
+  const handleEditClick = (p: ExternalContact) => {
+    setEditingContact(p);
+    setEditForm({
+      name: p.name,
+      email: p.email ?? "",
+      phone: p.phone ?? "",
+      organization: p.organization ?? "",
+      position: p.position ?? "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingContact) return;
+    try {
+      await updateExtParticipant.mutateAsync({
+        contactId: editingContact.id,
+        name: editForm.name,
+        email: editForm.email || null,
+        phone: editForm.phone || null,
+        organization: editForm.organization || null,
+        position: editForm.position || null,
+      });
+      toast.success("Data peserta eksternal berhasil diperbarui.");
+      setEditDialogOpen(false);
+    } catch {
+      toast.error("Gagal memperbarui data peserta eksternal.");
+    }
+  };
+
+  const handleRemove = async (contactId: number) => {
+    try {
+      await removeExtParticipant.mutateAsync(contactId);
+      toast.success("Peserta eksternal berhasil dihapus dari meeting.");
+    } catch {
+      toast.error("Gagal menghapus peserta eksternal.");
+    }
+  };
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Nama</TableHead>
-          <TableHead>Organisasi</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>No. HP</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {participants.map((p) => (
-          <TableRow key={p.id}>
-            <TableCell className="font-medium">
-              {p.name}
-              {p.position && (
-                <span className="text-xs text-muted-foreground ml-1">
-                  ({p.position})
-                </span>
-              )}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {p.organization ?? "-"}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {p.email ?? "-"}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {p.phone ?? "-"}
-            </TableCell>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nama</TableHead>
+            <TableHead>Organisasi</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>No. HP</TableHead>
+            {isAdmin && <TableHead className="w-[100px]">Aksi</TableHead>}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {participants.map((p) => (
+            <TableRow key={p.id}>
+              <TableCell className="font-medium">
+                {p.name}
+                {p.position && (
+                  <span className="text-xs text-muted-foreground ml-1">
+                    ({p.position})
+                  </span>
+                )}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {p.organization ?? "-"}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {p.email ?? "-"}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {p.phone ?? "-"}
+              </TableCell>
+              {isAdmin && (
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      onClick={() => handleEditClick(p)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          disabled={removeExtParticipant.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Hapus Peserta Eksternal?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Yakin ingin menghapus {p.name} dari meeting ini?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Batal</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleRemove(p.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Ya, Hapus
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {/* Edit External Participant Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Peserta Eksternal</DialogTitle>
+            <DialogDescription>
+              Perbarui informasi peserta eksternal.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="ext-name">Nama *</Label>
+              <Input
+                id="ext-name"
+                value={editForm.name}
+                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ext-email">Email</Label>
+              <Input
+                id="ext-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ext-phone">No. HP</Label>
+              <Input
+                id="ext-phone"
+                value={editForm.phone}
+                onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ext-org">Organisasi</Label>
+              <Input
+                id="ext-org"
+                value={editForm.organization}
+                onChange={(e) => setEditForm((f) => ({ ...f, organization: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ext-position">Jabatan</Label>
+              <Input
+                id="ext-position"
+                value={editForm.position}
+                onChange={(e) => setEditForm((f) => ({ ...f, position: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              onClick={handleEditSave}
+              disabled={!editForm.name.trim() || updateExtParticipant.isPending}
+            >
+              {updateExtParticipant.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -942,6 +1113,8 @@ export default function MeetingDetailPage() {
               <CardContent>
                 <ExternalParticipantsList
                   participants={meeting.external_participants ?? []}
+                  meetingId={numericId}
+                  isAdmin={isAdmin}
                 />
               </CardContent>
             </Card>

@@ -6,8 +6,18 @@ const api = axios.create({
   withXSRFToken: true,
   headers: {
     Accept: "application/json",
-    "Content-Type": "application/json",
   },
+});
+
+// Auto-set Content-Type: let Axios handle FormData (multipart boundary),
+// default to application/json for plain objects.
+api.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  } else if (!config.headers["Content-Type"]) {
+    config.headers["Content-Type"] = "application/json";
+  }
+  return config;
 });
 
 // Get CSRF cookie before making stateful requests

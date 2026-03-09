@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ExternalContactController;
 use App\Http\Controllers\Api\FollowUpController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\MeetingNoteController;
+use App\Http\Controllers\Api\MeetingExternalParticipantController;
 use App\Http\Controllers\Api\MeetingParticipantController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\TaskCommentController;
@@ -46,6 +47,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('participants', [MeetingParticipantController::class, 'store']);
             Route::patch('participants/{userId}', [MeetingParticipantController::class, 'update']);
             Route::delete('participants/{userId}', [MeetingParticipantController::class, 'destroy']);
+        });
+
+        // Meeting External Participants
+        Route::prefix('meetings/{meeting}')->group(function () {
+            Route::post('external-participants', [MeetingExternalParticipantController::class, 'store']);
+            Route::put('external-participants/{contactId}', [MeetingExternalParticipantController::class, 'update']);
+            Route::delete('external-participants/{contactId}', [MeetingExternalParticipantController::class, 'destroy']);
         });
 
         // Meeting Notes

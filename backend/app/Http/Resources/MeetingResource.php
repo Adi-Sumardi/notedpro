@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class MeetingResource extends JsonResource
 {
@@ -40,7 +39,7 @@ class MeetingResource extends JsonResource
             'follow_ups_count' => $this->whenCounted('followUpItems'),
             'latest_note' => new MeetingNoteResource($this->whenLoaded('latestNote')),
             'attachment_url' => $this->attachment_path
-                ? Storage::disk('public')->url($this->attachment_path)
+                ? url('storage/' . $this->attachment_path)
                 : null,
             'attachment_name' => $this->attachment_original_name,
             'created_at' => $this->created_at,

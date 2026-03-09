@@ -29,10 +29,7 @@ export function useCreateMeeting() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: FormData | Record<string, unknown>) => {
-      const isFormData = payload instanceof FormData;
-      const { data } = await api.post("/api/v1/meetings", payload, isFormData ? {
-        headers: { "Content-Type": "multipart/form-data" },
-      } : undefined);
+      const { data } = await api.post("/api/v1/meetings", payload);
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["meetings"] }),
@@ -111,6 +108,62 @@ export function useRemoveParticipant(meetingId: number) {
   return useMutation({
     mutationFn: async (userId: number) => {
       const { data } = await api.delete(`/api/v1/meetings/${meetingId}/participants/${userId}`);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meetings", meetingId] });
+    },
+  });
+}
+
+export function useAddExternalParticipant(meetingId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      name: string;
+      email?: string | null;
+      phone?: string | null;
+      organization?: string | null;
+      position?: string | null;
+      role?: string;
+      external_contact_id?: number;
+    }) => {
+      const { data } = await api.post(`/api/v1/meetings/${meetingId}/external-participants`, payload);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meetings", meetingId] });
+    },
+  });
+}
+
+export function useUpdateExternalParticipant(meetingId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      contactId: number;
+      name: string;
+      email?: string | null;
+      phone?: string | null;
+      organization?: string | null;
+      position?: string | null;
+      role?: string;
+    }) => {
+      const { contactId, ...rest } = payload;
+      const { data } = await api.put(`/api/v1/meetings/${meetingId}/external-participants/${contactId}`, rest);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meetings", meetingId] });
+    },
+  });
+}
+
+export function useRemoveExternalParticipant(meetingId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (contactId: number) => {
+      const { data } = await api.delete(`/api/v1/meetings/${meetingId}/external-participants/${contactId}`);
       return data;
     },
     onSuccess: () => {

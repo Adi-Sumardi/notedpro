@@ -107,7 +107,9 @@ class MeetingController extends Controller
             ], 404);
         }
 
-        return Storage::disk('public')->download(
+        $disk = Storage::disk('public');
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        return $disk->download(
             $meeting->attachment_path,
             $meeting->attachment_original_name
         );
