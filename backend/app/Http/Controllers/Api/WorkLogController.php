@@ -147,9 +147,14 @@ class WorkLogController extends Controller
             abort(404);
         }
 
-        return Storage::disk('public')->download(
-            $attachment->file_path,
-            $attachment->original_name
-        );
+        $disk = Storage::disk('public');
+        $path = $attachment->file_path;
+        $name = $attachment->original_name ?? basename($path);
+
+        return response()->streamDownload(function () use ($disk, $path) {
+            echo $disk->get($path);
+        }, $name, [
+            'Content-Type' => $disk->mimeType($path),
+        ]);
     }
 }
