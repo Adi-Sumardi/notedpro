@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('meetings/{meeting}')->group(function () {
             Route::get('participants', [MeetingParticipantController::class, 'index']);
             Route::post('participants', [MeetingParticipantController::class, 'store']);
+            Route::patch('participants/{userId}', [MeetingParticipantController::class, 'update']);
             Route::delete('participants/{userId}', [MeetingParticipantController::class, 'destroy']);
         });
 

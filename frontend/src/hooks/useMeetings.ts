@@ -78,6 +78,47 @@ export function useUpdateMeetingStatus(id: number) {
   });
 }
 
+export function useAddParticipant(meetingId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { user_id: number; role: string }) => {
+      const { data } = await api.post(`/api/v1/meetings/${meetingId}/participants`, payload);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meetings", meetingId] });
+    },
+  });
+}
+
+export function useUpdateParticipantRole(meetingId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { userId: number; role: string }) => {
+      const { data } = await api.patch(`/api/v1/meetings/${meetingId}/participants/${payload.userId}`, {
+        role: payload.role,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meetings", meetingId] });
+    },
+  });
+}
+
+export function useRemoveParticipant(meetingId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: number) => {
+      const { data } = await api.delete(`/api/v1/meetings/${meetingId}/participants/${userId}`);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meetings", meetingId] });
+    },
+  });
+}
+
 export function useMeetingNotes(meetingId: number) {
   return useQuery({
     queryKey: ["meetings", meetingId, "notes"],

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouteId } from "@/hooks/useRouteId";
 
 import { useRouter } from "next/navigation";
-import { useMeeting, useUpdateMeetingStatus, useDeleteMeeting } from "@/hooks/useMeetings";
+import { useMeeting, useUpdateMeetingStatus, useDeleteMeeting, useUpdateParticipantRole, useRemoveParticipant } from "@/hooks/useMeetings";
 import { useCreateTask } from "@/hooks/useTasks";
 import { useUsers } from "@/hooks/useUsers";
 import { useAuthStore } from "@/stores/authStore";
@@ -71,6 +71,13 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   CalendarDays,
   MapPin,
@@ -481,22 +488,48 @@ function FollowUpTable({
 
 function ParticipantsList({
   participants,
+  meetingId,
+  isAdmin,
 }: {
   participants: Meeting["participants"];
+  meetingId: number;
+  isAdmin: boolean;
 }) {
+  const updateRole = useUpdateParticipantRole(meetingId);
+  const removeParticipant = useRemoveParticipant(meetingId);
+
+  const handleRoleChange = async (userId: number, role: string) => {
+    try {
+      await updateRole.mutateAsync({ userId, role });
+      toast.success("Role peserta berhasil diperbarui.");
+    } catch {
+      toast.error("Gagal memperbarui role peserta.");
+    }
+  };
+
+  const handleRemove = async (userId: number) => {
+    try {
+      await removeParticipant.mutateAsync(userId);
+      toast.success("Peserta berhasil dihapus.");
+    } catch {
+      toast.error("Gagal menghapus peserta.");
+    }
+  };
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Nama</TableHead>
           <TableHead>Role</TableHead>
+          {isAdmin && <TableHead className="w-[80px]">Aksi</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
         {participants.length === 0 ? (
           <TableRow>
             <TableCell
-              colSpan={2}
+              colSpan={isAdmin ? 3 : 2}
               className="text-center text-muted-foreground"
             >
               Belum ada peserta.
@@ -509,10 +542,59 @@ function ParticipantsList({
                 {p.name}
               </TableCell>
               <TableCell>
-                <Badge variant="outline">
-                  {p.pivot?.role ?? "-"}
-                </Badge>
+                {isAdmin ? (
+                  <Select
+                    defaultValue={p.pivot?.role ?? "participant"}
+                    onValueChange={(val) => handleRoleChange(p.id, val)}
+                  >
+                    <SelectTrigger className="w-[130px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="host">Host</SelectItem>
+                      <SelectItem value="noter">Noter</SelectItem>
+                      <SelectItem value="participant">Participant</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge variant="outline">
+                    {p.pivot?.role ?? "-"}
+                  </Badge>
+                )}
               </TableCell>
+              {isAdmin && (
+                <TableCell>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        disabled={removeParticipant.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Hapus Peserta?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Yakin ingin menghapus {p.name} dari meeting ini?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleRemove(p.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Ya, Hapus
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </TableCell>
+              )}
             </TableRow>
           ))
         )}
@@ -845,7 +927,7 @@ export default function MeetingDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ParticipantsList participants={participants} />
+              <ParticipantsList participants={participants} meetingId={numericId} isAdmin={isAdmin} />
             </CardContent>
           </Card>
 

@@ -47,6 +47,22 @@ class MeetingParticipantController extends Controller
         ], 201);
     }
 
+    public function update(Request $request, Meeting $meeting, int $userId): JsonResponse
+    {
+        $validated = $request->validate([
+            'role' => ['required', 'in:host,noter,participant'],
+        ]);
+
+        $meeting->participants()->updateExistingPivot($userId, [
+            'role' => $validated['role'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Role peserta berhasil diperbarui.',
+        ]);
+    }
+
     public function destroy(Meeting $meeting, int $userId): JsonResponse
     {
         $meeting->participants()->detach($userId);

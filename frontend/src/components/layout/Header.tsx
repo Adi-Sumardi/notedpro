@@ -288,8 +288,8 @@ export default function Header() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-sm text-red-600 focus:text-red-600 cursor-pointer"
-                    onClick={() => {
-                      logout();
+                    onClick={async () => {
+                      await logout();
                       window.location.href = "/login";
                     }}
                   >

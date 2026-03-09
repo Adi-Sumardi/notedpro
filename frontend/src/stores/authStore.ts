@@ -23,7 +23,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await api.post("/api/logout");
+    try {
+      await getCsrfCookie();
+      await api.post("/api/logout");
+    } catch {
+      // Ignore errors — always clear local state
+    }
     set({ user: null });
   },
 
