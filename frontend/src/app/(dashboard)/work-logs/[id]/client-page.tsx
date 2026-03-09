@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { useRouteId } from "@/hooks/useRouteId";
 import Link from "next/link";
 import PageHeader from "@/components/layout/PageHeader";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { useWorkLog, useSubmitWorkLog, useReviewWorkLog, useDeleteWorkLog } from "@/hooks/useWorkLogs";
 import { useAuthStore } from "@/stores/authStore";
@@ -57,6 +63,7 @@ import {
   Link2,
   ExternalLink,
   Download,
+  Eye,
 } from "lucide-react";
 
 
@@ -69,6 +76,11 @@ const categoryColorMap: Record<string, string> = {
   monitoring: "bg-orange-100 text-orange-700",
   other: "bg-gray-100 text-gray-600",
 };
+
+function isPreviewable(name: string) {
+  const ext = name.split(".").pop()?.toLowerCase();
+  return ["pdf", "jpg", "jpeg", "png"].includes(ext ?? "");
+}
 
 function getFileIcon(name: string) {
   const ext = name.split(".").pop()?.toLowerCase();
@@ -99,6 +111,11 @@ export default function WorkLogDetailPage() {
   const deleteLog = useDeleteWorkLog();
 
   const [reviewComment, setReviewComment] = useState("");
+  const [previewAttachment, setPreviewAttachment] = useState<{
+    url: string;
+    name: string;
+    type: "pdf" | "image";
+  } | null>(null);
 
   if (isLoading) {
     return (
@@ -126,7 +143,7 @@ export default function WorkLogDetailPage() {
 
   const isOwner = Number(user?.id) === Number(log.user?.id);
   const canEdit =
-    isOwner && (log.status === "draft" || log.status === "rejected");
+    isOwner && (log.status === "draft" || log.status === "submitted" || log.status === "rejected");
   const canSubmit = canEdit;
   const canReview = isReviewer && log.status === "submitted";
   const canDelete = isOwner && log.status === "draft";
@@ -360,15 +377,33 @@ export default function WorkLogDetailPage() {
                       )}
                     </div>
                     {att.file_url && (
-                      <a
-                        href={att.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted shrink-0"
-                      >
-                        <Download className="h-4 w-4" />
-                        Unduh
-                      </a>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isPreviewable(att.original_name ?? "file") && (
+                          <button
+                            onClick={() => {
+                              const ext = (att.original_name ?? "").split(".").pop()?.toLowerCase();
+                              setPreviewAttachment({
+                                url: att.file_url!,
+                                name: att.original_name ?? "file",
+                                type: ext === "pdf" ? "pdf" : "image",
+                              });
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Preview
+                          </button>
+                        )}
+                        <a
+                          href={att.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted"
+                        >
+                          <Download className="h-4 w-4" />
+                          Unduh
+                        </a>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -483,6 +518,46 @@ export default function WorkLogDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Preview Modal */}
+      <Dialog
+        open={!!previewAttachment}
+        onOpenChange={(open) => !open && setPreviewAttachment(null)}
+      >
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="truncate pr-8">
+              {previewAttachment?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-auto">
+            {previewAttachment?.type === "pdf" ? (
+              <iframe
+                src={previewAttachment.url}
+                className="w-full h-[70vh] rounded border"
+                title={previewAttachment.name}
+              />
+            ) : previewAttachment?.type === "image" ? (
+              <img
+                src={previewAttachment.url}
+                alt={previewAttachment.name}
+                className="max-w-full max-h-[70vh] mx-auto rounded object-contain"
+              />
+            ) : null}
+          </div>
+          <div className="flex justify-end pt-2">
+            <a
+              href={previewAttachment?.url ?? "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted"
+            >
+              <Download className="h-4 w-4" />
+              Unduh
+            </a>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Back */}
       <Button asChild variant="outline">

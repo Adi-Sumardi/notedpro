@@ -61,6 +61,11 @@ class Task extends Model
         return $this->hasMany(TaskActivity::class);
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(TaskAttachment::class);
+    }
+
     public function isOverdue(): bool
     {
         return $this->deadline && $this->status !== TaskStatus::Done && $this->deadline->isPast();

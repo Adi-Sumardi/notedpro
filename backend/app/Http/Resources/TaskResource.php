@@ -28,6 +28,7 @@ class TaskResource extends JsonResource
             ),
             'comments' => TaskCommentResource::collection($this->whenLoaded('comments')),
             'activities' => TaskActivityResource::collection($this->whenLoaded('activities')),
+            'attachments' => TaskAttachmentResource::collection($this->whenLoaded('attachments')),
             'completed_at' => $this->completed_at,
             'created_at' => $this->created_at,
         ];

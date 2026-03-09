@@ -178,7 +178,7 @@ export default function WorkLogsPage() {
                         <Link href={`/work-logs/${log.id}`}>Detail</Link>
                       </Button>
                       {Number(user?.id) === Number(log.user?.id) &&
-                        (log.status === "draft" || log.status === "rejected") && (
+                        (log.status === "draft" || log.status === "submitted" || log.status === "rejected") && (
                         <Button asChild variant="outline" size="sm">
                           <Link href={`/work-logs/${log.id}/edit`}>
                             <Pencil className="mr-1 h-3.5 w-3.5" />

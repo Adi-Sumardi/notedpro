@@ -98,6 +98,17 @@ export interface FollowUpItem {
 
 export type FollowUpStatus = "open" | "assigned" | "done";
 
+export interface TaskAttachment {
+  id: number;
+  task_id: number;
+  task_comment_id: number | null;
+  file_url: string | null;
+  original_name: string;
+  mime_type: string | null;
+  file_size: number | null;
+  created_at: string;
+}
+
 export interface Task {
   id: number;
   title: string;
@@ -114,6 +125,7 @@ export interface Task {
   meeting?: Meeting;
   comments?: TaskComment[];
   activities?: TaskActivity[];
+  attachments?: TaskAttachment[];
   completed_at: string | null;
   created_at: string;
 }
@@ -125,6 +137,7 @@ export interface TaskComment {
   id: number;
   user: User;
   content: string;
+  attachments?: TaskAttachment[];
   created_at: string;
 }
 

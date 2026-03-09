@@ -66,6 +66,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('tasks', TaskController::class);
         Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus']);
 
+        // Task Attachments
+        Route::post('tasks/{task}/attachments', [TaskController::class, 'uploadAttachments']);
+        Route::delete('task-attachments/{task_attachment}', [TaskController::class, 'deleteAttachment']);
+        Route::get('task-attachments/{task_attachment}/download', [TaskController::class, 'downloadAttachment']);
+
         // Task Comments
         Route::get('tasks/{task}/comments', [TaskCommentController::class, 'index']);
         Route::post('tasks/{task}/comments', [TaskCommentController::class, 'store']);

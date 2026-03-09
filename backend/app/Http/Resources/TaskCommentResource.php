@@ -13,6 +13,7 @@ class TaskCommentResource extends JsonResource
             'id' => $this->id,
             'user' => new UserResource($this->whenLoaded('user')),
             'content' => $this->content,
+            'attachments' => TaskAttachmentResource::collection($this->whenLoaded('attachments')),
             'created_at' => $this->created_at,
         ];
     }

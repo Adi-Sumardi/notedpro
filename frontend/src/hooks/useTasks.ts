@@ -58,8 +58,45 @@ export function useUpdateTaskStatus(id: number) {
 export function useAddComment(taskId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (content: string) => {
-      const { data } = await api.post(`/api/v1/tasks/${taskId}/comments`, { content });
+    mutationFn: async (payload: { content: string; files?: File[] }) => {
+      const fd = new FormData();
+      fd.append("content", payload.content);
+      if (payload.files) {
+        payload.files.forEach((f) => fd.append("attachments[]", f));
+      }
+      const { data } = await api.post(`/api/v1/tasks/${taskId}/comments`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks", taskId] });
+    },
+  });
+}
+
+export function useUploadTaskAttachments(taskId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (files: File[]) => {
+      const fd = new FormData();
+      files.forEach((f) => fd.append("attachments[]", f));
+      const { data } = await api.post(`/api/v1/tasks/${taskId}/attachments`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks", taskId] });
+    },
+  });
+}
+
+export function useDeleteTaskAttachment(taskId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (attachmentId: number) => {
+      const { data } = await api.delete(`/api/v1/task-attachments/${attachmentId}`);
       return data;
     },
     onSuccess: () => {
