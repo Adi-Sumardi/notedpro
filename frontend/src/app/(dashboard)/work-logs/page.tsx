@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ClipboardPenLine,
   Plus,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +50,7 @@ const statusOptions: { value: string; label: string }[] = [
 ];
 
 export default function WorkLogsPage() {
-  const { hasRole } = useAuthStore();
+  const { user, hasRole } = useAuthStore();
   const isReviewer =
     hasRole("admin") || hasRole("super-admin") || hasRole("manager");
 
@@ -172,9 +173,20 @@ export default function WorkLogsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/work-logs/${log.id}`}>Detail</Link>
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/work-logs/${log.id}`}>Detail</Link>
+                      </Button>
+                      {Number(user?.id) === Number(log.user?.id) &&
+                        (log.status === "draft" || log.status === "rejected") && (
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/work-logs/${log.id}/edit`}>
+                            <Pencil className="mr-1 h-3.5 w-3.5" />
+                            Edit
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
