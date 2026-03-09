@@ -124,6 +124,9 @@ jobs:
             # Run database migrations
             php artisan migrate --force 2>&1
 
+            # Sync roles & permissions (idempotent)
+            php artisan db:seed --class=RolePermissionSeeder --force 2>&1
+
             # Optimize for production
             php artisan config:cache
             php artisan route:cache
