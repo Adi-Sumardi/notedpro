@@ -136,7 +136,7 @@ function NotificationBell() {
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border bg-white shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 rounded-lg border bg-white shadow-lg z-50">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <h3 className="text-sm font-semibold text-gray-900">
               Notifications
@@ -250,16 +250,17 @@ export default function Header() {
             </div>
 
             {/* Right: Notifications + User + Mobile Hamburger */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <NotificationBell />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-2 px-2 hover:bg-gray-100"
+                    size="icon"
+                    className="sm:size-auto sm:px-2 hover:bg-gray-100"
                   >
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-8 w-8 shrink-0">
                       <AvatarFallback className="bg-[#BEDBED] text-[#063E66] text-xs font-semibold">
                         {user ? getInitials(user.name) : "?"}
                       </AvatarFallback>
