@@ -39,6 +39,26 @@ const statusVariant: Record<FollowUpStatus, string> = {
   done: "bg-green-100 text-green-700",
 };
 
+const printStyles = `
+@media print {
+  header, nav, aside, footer,
+  [data-sidebar], [data-radix-popper-content-wrapper],
+  .print\\:hidden { display: none !important; }
+
+  body { background: white !important; }
+
+  /* Show only editor content */
+  .ProseMirror {
+    min-height: unset !important;
+    padding: 0 !important;
+  }
+
+  /* Hide toolbar and follow-up floating button */
+  .border-b.p-2,
+  .absolute.z-10 { display: none !important; }
+}
+`;
+
 export default function MeetingNotesPage() {
   const id = useRouteId();
   const router = useRouter();
@@ -78,6 +98,7 @@ export default function MeetingNotesPage() {
 
   return (
     <div className="space-y-6">
+      <style dangerouslySetInnerHTML={{ __html: printStyles }} />
       <PageHeader>
         <div className="flex items-center gap-4">
           <Button

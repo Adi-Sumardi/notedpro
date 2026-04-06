@@ -20,7 +20,17 @@ import {
   MessageSquarePlus,
   X,
   UserPlus,
+  Upload,
+  Download,
+  Printer,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { tiptapToMarkdown, markdownToHtml } from "@/lib/markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,6 +105,7 @@ export default function TiptapEditor({
   >("saved");
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   const createFollowUp = useCreateFollowUp(meetingId);
   const { data: users } = useUsers();
@@ -174,6 +185,38 @@ export default function TiptapEditor({
     onSave(editor.getJSON(), editor.getHTML());
     setAutoSaveStatus("saved");
   }, [editor, onSave]);
+
+  const handleExportMarkdown = () => {
+    if (!editor) return;
+    const md = tiptapToMarkdown(editor.getJSON());
+    const blob = new Blob([md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "notulensi.md";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPdf = () => {
+    window.print();
+  };
+
+  const handleImportMarkdown = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editor) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const md = ev.target?.result as string;
+      const html = markdownToHtml(md);
+      editor.commands.setContent(html);
+      toast.success("Notulensi berhasil diimpor");
+      handleSave();
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   const handleOpenFollowUpDialog = () => {
     setFollowUpForm({
@@ -387,6 +430,47 @@ export default function TiptapEditor({
           {autoSaveStatus === "saved" && "Tersimpan"}
           {autoSaveStatus === "unsaved" && "Belum disimpan"}
         </span>
+
+        {/* Import */}
+        <input
+          ref={importFileRef}
+          type="file"
+          accept=".md,.txt"
+          className="hidden"
+          onChange={handleImportMarkdown}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => importFileRef.current?.click()}
+          title="Import dari Markdown (.md)"
+        >
+          <Upload className="h-4 w-4" />
+          <span className="hidden sm:inline">Import</span>
+        </Button>
+
+        {/* Export dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportMarkdown} className="gap-2">
+              <Download className="h-4 w-4 text-muted-foreground" />
+              Export Markdown (.md)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPdf} className="gap-2">
+              <Printer className="h-4 w-4 text-muted-foreground" />
+              Export PDF (Print)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Save button */}
         <Button
