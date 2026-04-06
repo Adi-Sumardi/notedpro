@@ -248,7 +248,7 @@ export default function NewWorkLogPage() {
               <Label htmlFor="log_date">
                 Tanggal <span className="text-red-500">*</span>
               </Label>
-              <Input id="log_date" type="date" {...register("log_date")} />
+              <Input id="log_date" type="date" className="[color-scheme:light]" {...register("log_date")} />
               {errors.log_date && (
                 <p className="text-sm text-red-500">
                   {errors.log_date.message}

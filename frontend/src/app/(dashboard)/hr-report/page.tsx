@@ -55,6 +55,7 @@ export default function HrReportPage() {
               <label className="text-sm font-medium text-gray-700 mb-1 block">Dari Tanggal</label>
               <Input
                 type="date"
+                className="[color-scheme:light]"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
               />
@@ -63,6 +64,7 @@ export default function HrReportPage() {
               <label className="text-sm font-medium text-gray-700 mb-1 block">Sampai Tanggal</label>
               <Input
                 type="date"
+                className="[color-scheme:light]"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
               />

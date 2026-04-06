@@ -294,6 +294,7 @@ export default function NewMeetingPage() {
               <Input
                 id="meeting_date"
                 type="datetime-local"
+                className="[color-scheme:light]"
                 {...register("meeting_date")}
               />
               {errors.meeting_date && (

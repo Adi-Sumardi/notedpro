@@ -333,7 +333,7 @@ function AssignTaskDialog({
                       </Label>
                       <Input
                         type="date"
-                        className="h-7 text-xs"
+                        className="h-7 text-xs [color-scheme:light]"
                         value={assignee.deadline}
                         min={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
