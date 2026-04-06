@@ -42,6 +42,17 @@ jobs:
           timeout: 300s
           command_timeout: 15m
 
+      - name: Clear stale frontend chunks on server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          timeout: 300s
+          script: |
+            rm -rf $HOME/domains/simonik.yapinet.id/public_html/_next
+
       - name: Upload frontend static files via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
