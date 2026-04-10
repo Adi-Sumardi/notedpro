@@ -30,6 +30,7 @@ jobs:
         run: npm run build
 
       - name: Upload backend via SCP
+        timeout-minutes: 10
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -39,8 +40,8 @@ jobs:
           source: "backend/"
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id/app"
           overwrite: true
-          timeout: 300s
-          command_timeout: 15m
+          timeout: 60s
+          command_timeout: 8m
 
       - name: Clear stale frontend chunks on server
         uses: appleboy/ssh-action@v1
@@ -54,6 +55,7 @@ jobs:
             rm -rf $HOME/domains/simonik.yapinet.id/public_html/_next
 
       - name: Upload frontend static files via SCP
+        timeout-minutes: 10
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -64,10 +66,11 @@ jobs:
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id/public_html"
           strip_components: 2
           overwrite: true
-          timeout: 300s
-          command_timeout: 15m
+          timeout: 60s
+          command_timeout: 8m
 
       - name: Upload deploy files via SCP
+        timeout-minutes: 5
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -77,8 +80,8 @@ jobs:
           source: "deploy/"
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id"
           overwrite: true
-          timeout: 300s
-          command_timeout: 15m
+          timeout: 60s
+          command_timeout: 3m
 
       - name: Setup backend & finalize deployment
         uses: appleboy/ssh-action@v1
