@@ -78,13 +78,16 @@ interface Assignee {
 interface TiptapEditorProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   content: any;
-  onSave: (json: unknown, html: string) => void;
+  /** Fallback HTML content — used when JSON content is null (e.g. imported from Notion) */
+  contentHtml?: string | null;
+  onSave: (json: unknown, html: string) => Promise<void> | void;
   meetingId: number;
   noteId: number | undefined;
 }
 
 export default function TiptapEditor({
   content,
+  contentHtml,
   onSave,
   meetingId,
   noteId,
@@ -106,6 +109,9 @@ export default function TiptapEditor({
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
+  // Keep onSave ref fresh so stale closures (e.g. onUpdate) always call the latest version
+  const onSaveRef = useRef(onSave);
+  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
 
   const createFollowUp = useCreateFollowUp(meetingId);
   const { data: users } = useUsers();
@@ -131,17 +137,27 @@ export default function TiptapEditor({
           "prose prose-sm max-w-none min-h-[400px] focus:outline-none px-4 py-3",
       },
     },
-    onUpdate: () => {
+    onUpdate: ({ editor: currentEditor }) => {
       setAutoSaveStatus("unsaved");
 
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
       }
+      // Use `currentEditor` from the callback param (not stale closure) and
+      // `onSaveRef` (always points to the latest onSave prop) to avoid stale closures.
       autoSaveTimerRef.current = setTimeout(() => {
-        handleSave();
+        setAutoSaveStatus("saving");
+        onSaveRef.current(currentEditor.getJSON(), currentEditor.getHTML());
+        setAutoSaveStatus("saved");
       }, 3000);
     },
   });
+
+  // Load HTML fallback when JSON content is null (e.g. imported from Notion)
+  useEffect(() => {
+    if (!editor || content || !contentHtml) return;
+    editor.commands.setContent(contentHtml);
+  }, [editor, content, contentHtml]);
 
   // Track selection updates for the floating follow-up button
   useEffect(() => {
@@ -179,11 +195,15 @@ export default function TiptapEditor({
     };
   }, [editor]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!editor) return;
     setAutoSaveStatus("saving");
-    onSave(editor.getJSON(), editor.getHTML());
-    setAutoSaveStatus("saved");
+    try {
+      await onSave(editor.getJSON(), editor.getHTML());
+      setAutoSaveStatus("saved");
+    } catch {
+      setAutoSaveStatus("unsaved");
+    }
   }, [editor, onSave]);
 
   const handleExportMarkdown = () => {

@@ -130,6 +130,7 @@ export default function MeetingNotesPage() {
       {/* Tiptap Editor */}
       <TiptapEditor
         content={latestNote?.content}
+        contentHtml={latestNote?.content_html}
         onSave={handleSave}
         meetingId={meetingId}
         noteId={latestNote?.id}
