@@ -211,8 +211,11 @@ function ImportNotionDialog({
   }
 
   async function handleSubmit() {
-    // Validate
-    for (const item of items) {
+    // Only process items that haven't succeeded yet
+    const pending = items.filter((i) => i.status !== "done");
+
+    // Validate pending items only
+    for (const item of pending) {
       if (!item.title.trim()) {
         toast.error("Semua judul meeting wajib diisi");
         return;
@@ -233,7 +236,7 @@ function ImportNotionDialog({
     let successCount = 0;
     let failCount = 0;
 
-    for (const item of items) {
+    for (const item of pending) {
       updateItem(item.id, { status: "uploading" });
       try {
         const meetingRes = await createMeeting.mutateAsync({
@@ -404,7 +407,7 @@ function ImportItemRow({
           {item.status === "error" && (
             <AlertCircle className="h-4 w-4 text-red-500" />
           )}
-          {canRemove && item.status === "idle" && (
+          {canRemove && (item.status === "idle" || item.status === "error") && (
             <button
               type="button"
               onClick={onRemove}
