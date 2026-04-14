@@ -27,7 +27,7 @@ class MeetingNoteController extends Controller
     public function store(Request $request, Meeting $meeting): JsonResponse
     {
         $validated = $request->validate([
-            'content' => ['required', 'array'],
+            'content' => ['nullable', 'array'],
             'content_html' => ['nullable', 'string'],
         ]);
 
@@ -35,7 +35,7 @@ class MeetingNoteController extends Controller
 
         $note = MeetingNote::create([
             'meeting_id' => $meeting->id,
-            'content' => $validated['content'],
+            'content' => $validated['content'] ?? null,
             'content_html' => $validated['content_html'] ?? null,
             'version' => $latestVersion + 1,
             'created_by' => $request->user()->id,
@@ -51,12 +51,12 @@ class MeetingNoteController extends Controller
     public function update(Request $request, Meeting $meeting, MeetingNote $note): JsonResponse
     {
         $validated = $request->validate([
-            'content' => ['required', 'array'],
+            'content' => ['nullable', 'array'],
             'content_html' => ['nullable', 'string'],
         ]);
 
         $note->update([
-            'content' => $validated['content'],
+            'content' => $validated['content'] ?? $note->content,
             'content_html' => $validated['content_html'] ?? $note->content_html,
             'version' => $note->version + 1,
         ]);
