@@ -33,6 +33,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CalendarDays,
   MapPin,
   Users,
@@ -45,6 +52,10 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  FilterX,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -522,29 +533,77 @@ function ImportItemRow({
 
 export default function MeetingsPage() {
   const { user } = useAuthStore();
-  const [search, setSearch] = useState("");
   const [importOpen, setImportOpen] = useState(false);
+
+  // ── Filter & pagination state ───────────────────────────────────────────────
+  const [search, setSearch]       = useState("");
+  const [status, setStatus]       = useState("all");
+  const [sortBy, setSortBy]       = useState<"meeting_date" | "created_at">("meeting_date");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [dateFrom, setDateFrom]   = useState("");
+  const [dateTo, setDateTo]       = useState("");
+  const [page, setPage]           = useState(1);
+  const PER_PAGE = 12;
+
+  // Reset to page 1 whenever filters change
+  function resetPage() { setPage(1); }
+
+  const hasActiveFilters = status !== "all" || dateFrom !== "" || dateTo !== "" ||
+    sortBy !== "meeting_date" || sortOrder !== "desc";
+
+  function clearFilters() {
+    setStatus("all");
+    setDateFrom("");
+    setDateTo("");
+    setSortBy("meeting_date");
+    setSortOrder("desc");
+    setSearch("");
+    setPage(1);
+  }
+
+  const params: Record<string, string> = {
+    per_page: String(PER_PAGE),
+    page: String(page),
+    sort_by: sortBy,
+    sort_order: sortOrder,
+  };
+  if (search)             params.search    = search;
+  if (status !== "all")   params.status    = status;
+  if (dateFrom)           params.date_from = dateFrom;
+  if (dateTo)             params.date_to   = dateTo;
+
+  const { data, isLoading } = useMeetings(params);
+  const meetings: Meeting[] = data?.data ?? [];
+  const meta = data?.meta;
 
   const canCreate =
     user?.roles?.includes("admin") ||
     user?.roles?.includes("super-admin") ||
     user?.roles?.includes("noter");
 
-  const { data, isLoading } = useMeetings({ search });
+  // ── Pagination helpers ──────────────────────────────────────────────────────
+  const lastPage   = meta?.last_page ?? 1;
+  const totalItems = meta?.total ?? 0;
+  const pageStart  = meta ? (page - 1) * PER_PAGE + 1 : 0;
+  const pageEnd    = meta ? Math.min(page * PER_PAGE, totalItems) : 0;
 
-  const meetings: Meeting[] = data?.data ?? [];
+  function buildPageNumbers(): (number | "…")[] {
+    if (lastPage <= 7) return Array.from({ length: lastPage }, (_, i) => i + 1);
+    if (page <= 4) return [1, 2, 3, 4, 5, "…", lastPage];
+    if (page >= lastPage - 3) return [1, "…", lastPage - 4, lastPage - 3, lastPage - 2, lastPage - 1, lastPage];
+    return [1, "…", page - 1, page, page + 1, "…", lastPage];
+  }
 
   return (
     <div className="space-y-6">
       <ImportNotionDialog open={importOpen} onOpenChange={setImportOpen} />
 
+      {/* ── Header ── */}
       <PageHeader>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Meetings</h1>
-            <p className="text-white/80">
-              Kelola rapat dan catatan meeting tim.
-            </p>
+            <p className="text-white/80">Kelola rapat dan catatan meeting tim.</p>
           </div>
           {canCreate && (
             <div className="flex gap-2">
@@ -567,42 +626,124 @@ export default function MeetingsPage() {
         </div>
       </PageHeader>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Cari meeting..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* ── Filter bar ── */}
+      <div className="space-y-3">
+        {/* Row 1: search + sort */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Cari meeting..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); resetPage(); }}
+              className="pl-9"
+            />
+          </div>
+
+          {/* Sort by */}
+          <Select value={sortBy} onValueChange={(v: "meeting_date" | "created_at") => { setSortBy(v); resetPage(); }}>
+            <SelectTrigger className="w-[170px]">
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="meeting_date">Tanggal Rapat</SelectItem>
+              <SelectItem value="created_at">Tanggal Dibuat</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Sort order */}
+          <Select value={sortOrder} onValueChange={(v: "desc" | "asc") => { setSortOrder(v); resetPage(); }}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">Terbaru</SelectItem>
+              <SelectItem value="asc">Terlama</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Status */}
+          <Select value={status} onValueChange={(v) => { setStatus(v); resetPage(); }}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Semua Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Clear filters */}
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5 text-muted-foreground">
+              <FilterX className="h-4 w-4" />
+              Reset
+            </Button>
+          )}
+        </div>
+
+        {/* Row 2: date range */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center gap-2">
+            <Label className="text-sm text-muted-foreground shrink-0">Dari</Label>
+            <Input
+              type="date"
+              className="w-[150px] [color-scheme:light]"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => { setDateFrom(e.target.value); resetPage(); }}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="text-sm text-muted-foreground shrink-0">Sampai</Label>
+            <Input
+              type="date"
+              className="w-[150px] [color-scheme:light]"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => { setDateTo(e.target.value); resetPage(); }}
+            />
+          </div>
+          {totalItems > 0 && !isLoading && (
+            <span className="text-sm text-muted-foreground ml-auto">
+              {pageStart}–{pageEnd} dari {totalItems} meeting
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Meeting Grid */}
+      {/* ── Meeting Grid ── */}
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <MeetingCardSkeleton key={i} />
-          ))}
+          {Array.from({ length: 6 }).map((_, i) => <MeetingCardSkeleton key={i} />)}
         </div>
       ) : meetings.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <CalendarDays className="mb-4 h-12 w-12 text-muted-foreground/50" />
-            <h3 className="text-lg font-medium">Belum ada meeting</h3>
+            <h3 className="text-lg font-medium">Tidak ada meeting ditemukan</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {search
-                ? "Tidak ada meeting yang cocok dengan pencarian."
-                : "Buat meeting pertama Anda untuk mulai mencatat."}
+              {hasActiveFilters || search
+                ? "Coba ubah filter atau kata kunci pencarian."
+                : "Buat meeting pertama untuk mulai mencatat."}
             </p>
-            {canCreate && !search && (
+            {hasActiveFilters || search ? (
+              <Button variant="outline" onClick={clearFilters} className="mt-4 gap-1.5">
+                <FilterX className="h-4 w-4" />
+                Reset Filter
+              </Button>
+            ) : canCreate ? (
               <Button asChild className="mt-4">
                 <Link href="/meetings/new">
                   <Plus className="mr-2 h-4 w-4" />
                   Buat Meeting
                 </Link>
               </Button>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       ) : (
@@ -610,6 +751,47 @@ export default function MeetingsPage() {
           {meetings.map((meeting) => (
             <MeetingCard key={meeting.id} meeting={meeting} />
           ))}
+        </div>
+      )}
+
+      {/* ── Pagination ── */}
+      {lastPage > 1 && (
+        <div className="flex items-center justify-center gap-1 pt-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          {buildPageNumbers().map((n, i) =>
+            n === "…" ? (
+              <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground text-sm select-none">…</span>
+            ) : (
+              <Button
+                key={n}
+                variant={n === page ? "default" : "outline"}
+                size="icon"
+                className="h-8 w-8 text-sm"
+                onClick={() => setPage(n as number)}
+              >
+                {n}
+              </Button>
+            )
+          )}
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            disabled={page >= lastPage}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       )}
     </div>

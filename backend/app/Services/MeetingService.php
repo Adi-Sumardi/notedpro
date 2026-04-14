@@ -46,8 +46,11 @@ class MeetingService
             $query->where('meeting_date', '<=', $filters['date_to']);
         }
 
-        return $query->orderByDesc('meeting_date')
-            ->paginate($filters['per_page'] ?? 15);
+        $sortBy    = in_array($filters['sort_by'] ?? '', ['created_at', 'meeting_date']) ? $filters['sort_by'] : 'meeting_date';
+        $sortOrder = ($filters['sort_order'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+
+        return $query->orderBy($sortBy, $sortOrder)
+            ->paginate($filters['per_page'] ?? 12);
     }
 
     public function create(array $data, User $user, ?UploadedFile $attachment = null): Meeting
