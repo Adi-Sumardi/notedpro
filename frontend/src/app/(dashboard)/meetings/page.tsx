@@ -43,6 +43,8 @@ import {
   FileText,
   X,
   Loader2,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -128,6 +130,32 @@ function MeetingCard({ meeting }: { meeting: Meeting }) {
   );
 }
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ImportStatus = "idle" | "uploading" | "done" | "error";
+
+interface ImportItem {
+  id: string;
+  file: File | null;
+  title: string;
+  meeting_date: string;
+  description: string;
+  status: ImportStatus;
+}
+
+function makeItem(): ImportItem {
+  return {
+    id: crypto.randomUUID(),
+    file: null,
+    title: "",
+    meeting_date: "",
+    description: "",
+    status: "idle",
+  };
+}
+
+// ─── ImportNotionDialog ───────────────────────────────────────────────────────
+
 function ImportNotionDialog({
   open,
   onOpenChange,
@@ -137,205 +165,357 @@ function ImportNotionDialog({
 }) {
   const router = useRouter();
   const createMeeting = useCreateMeeting();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({
-    title: "",
-    meeting_date: "",
-    description: "",
-  });
-  const [mdFile, setMdFile] = useState<File | null>(null);
+  const [items, setItems] = useState<ImportItem[]>([makeItem()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function updateItem(id: string, patch: Partial<ImportItem>) {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...patch } : item))
+    );
+  }
+
+  function handleFileChange(
+    id: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setMdFile(file);
-    // Auto-fill title from filename if empty
-    if (!form.title) {
-      const name = file.name.replace(/\.(md|txt)$/i, "").replace(/[-_]/g, " ");
-      setForm((prev) => ({ ...prev, title: name }));
-    }
+    const title = file.name.replace(/\.(md|txt)$/i, "").replace(/[-_]/g, " ");
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, file, title: item.title || title }
+          : item
+      )
+    );
     e.target.value = "";
   }
 
+  function removeItem(id: string) {
+    setItems((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      return next.length === 0 ? [makeItem()] : next;
+    });
+  }
+
+  function addItem() {
+    setItems((prev) => [...prev, makeItem()]);
+  }
+
   function handleClose() {
-    setForm({ title: "", meeting_date: "", description: "" });
-    setMdFile(null);
+    if (isSubmitting) return;
+    setItems([makeItem()]);
     setIsSubmitting(false);
     onOpenChange(false);
   }
 
   async function handleSubmit() {
-    if (!form.title.trim()) {
-      toast.error("Judul meeting wajib diisi");
-      return;
-    }
-    if (!form.meeting_date) {
-      toast.error("Tanggal meeting wajib diisi");
-      return;
-    }
-    if (!mdFile) {
-      toast.error("File catatan dari Notion wajib dipilih");
-      return;
+    // Validate
+    for (const item of items) {
+      if (!item.title.trim()) {
+        toast.error("Semua judul meeting wajib diisi");
+        return;
+      }
+      if (!item.meeting_date) {
+        toast.error("Semua tanggal meeting wajib diisi");
+        return;
+      }
+      if (!item.file) {
+        toast.error("Semua baris wajib memiliki file .md");
+        return;
+      }
     }
 
     setIsSubmitting(true);
-    try {
-      // 1. Create the meeting
-      const meetingRes = await createMeeting.mutateAsync({
-        title: form.title.trim(),
-        meeting_date: form.meeting_date,
-        description: form.description.trim() || undefined,
-        location_type: "offline",
-      });
-      const meetingId: number = meetingRes.data?.id ?? meetingRes.data?.data?.id;
 
-      // 2. Parse the .md file
-      const md = await mdFile.text();
-      const html = markdownToHtml(md);
+    let lastMeetingId: number | null = null;
+    let successCount = 0;
+    let failCount = 0;
 
-      // 3. Save note with imported content
-      await api.post(`/api/v1/meetings/${meetingId}/notes`, {
-        content: null,
-        content_html: html,
-      });
+    for (const item of items) {
+      updateItem(item.id, { status: "uploading" });
+      try {
+        const meetingRes = await createMeeting.mutateAsync({
+          title: item.title.trim(),
+          meeting_date: item.meeting_date,
+          description: item.description.trim() || undefined,
+          location_type: "offline",
+        });
+        const meetingId: number =
+          meetingRes.data?.id ?? meetingRes.data?.data?.id;
 
-      toast.success("Meeting & catatan berhasil diimpor!");
+        const md = await item.file!.text();
+        const html = markdownToHtml(md);
+
+        await api.post(`/api/v1/meetings/${meetingId}/notes`, {
+          content: null,
+          content_html: html,
+        });
+
+        updateItem(item.id, { status: "done" });
+        lastMeetingId = meetingId;
+        successCount++;
+      } catch {
+        updateItem(item.id, { status: "error" });
+        failCount++;
+      }
+    }
+
+    setIsSubmitting(false);
+
+    if (successCount > 0 && failCount === 0) {
+      toast.success(
+        successCount === 1
+          ? "Meeting & catatan berhasil diimpor!"
+          : `${successCount} meeting berhasil diimpor!`
+      );
       handleClose();
-      router.push(`/meetings/${meetingId}/notes`);
-    } catch {
-      toast.error("Gagal mengimpor. Coba lagi.");
-      setIsSubmitting(false);
+      if (lastMeetingId) router.push(`/meetings/${lastMeetingId}/notes`);
+    } else if (successCount > 0) {
+      toast.warning(
+        `${successCount} berhasil, ${failCount} gagal. Periksa baris yang merah.`
+      );
+    } else {
+      toast.error("Semua import gagal. Coba lagi.");
     }
   }
 
+  const allDone = items.every((i) => i.status === "done");
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl w-full max-h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             Import Catatan dari Notion
           </DialogTitle>
           <DialogDescription>
-            Buat meeting baru sekaligus impor catatannya dari file Markdown
-            (.md) yang diekspor dari Notion.
+            Buat satu atau beberapa meeting sekaligus dari file Markdown (.md)
+            yang diekspor dari Notion. Klik <strong>Tambah Baris</strong> untuk
+            menambah meeting lain.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          {/* File upload — shown first so title can be auto-filled */}
-          <div className="grid gap-2">
-            <Label>
-              File Catatan Notion (.md){" "}
-              <span className="text-red-500">*</span>
-            </Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".md,.txt"
-              className="hidden"
-              onChange={handleFileChange}
+        {/* Scrollable list */}
+        <div className="flex-1 overflow-y-auto pr-1 space-y-4 py-2">
+          {items.map((item, idx) => (
+            <ImportItemRow
+              key={item.id}
+              item={item}
+              index={idx}
+              onFileChange={(e) => handleFileChange(item.id, e)}
+              onUpdate={(patch) => updateItem(item.id, patch)}
+              onRemove={() => removeItem(item.id)}
+              canRemove={items.length > 1}
             />
-            {mdFile ? (
-              <div className="flex items-center gap-3 rounded-lg border px-3 py-2.5 bg-muted/30 overflow-hidden min-w-0">
-                <FileText className="h-5 w-5 text-primary shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{mdFile.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(mdFile.size / 1024).toFixed(1)} KB
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMdFile(null)}
-                  className="rounded-full p-1 hover:bg-muted shrink-0"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2 border-dashed h-20 flex-col"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Klik untuk pilih file .md dari Notion
-                </span>
-              </Button>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Di Notion: buka halaman → ··· → Export → Markdown &amp; CSV
-            </p>
-          </div>
-
-          {/* Title */}
-          <div className="grid gap-2">
-            <Label htmlFor="import_title">
-              Judul Meeting <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="import_title"
-              placeholder="Contoh: Rapat Evaluasi Q1 2026"
-              value={form.title}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, title: e.target.value }))
-              }
-            />
-          </div>
-
-          {/* Date */}
-          <div className="grid gap-2">
-            <Label htmlFor="import_date">
-              Tanggal &amp; Waktu <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="import_date"
-              type="datetime-local"
-              className="[color-scheme:light]"
-              value={form.meeting_date}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, meeting_date: e.target.value }))
-              }
-            />
-          </div>
-
-          {/* Description */}
-          <div className="grid gap-2">
-            <Label htmlFor="import_desc">Deskripsi (opsional)</Label>
-            <Textarea
-              id="import_desc"
-              placeholder="Agenda atau konteks rapat..."
-              rows={2}
-              value={form.description}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, description: e.target.value }))
-              }
-            />
-          </div>
+          ))}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
-            Batal
+        <div className="shrink-0 pt-2 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5 mb-4"
+            onClick={addItem}
+            disabled={isSubmitting || allDone}
+          >
+            <Plus className="h-4 w-4" />
+            Tambah Baris
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting} className="gap-1.5">
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
-            {isSubmitting ? "Mengimpor..." : "Import & Buat Meeting"}
-          </Button>
-        </DialogFooter>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || allDone}
+              className="gap-1.5"
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {isSubmitting
+                ? "Mengimpor..."
+                : items.length === 1
+                ? "Import & Buat Meeting"
+                : `Import ${items.length} Meeting`}
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+// ─── ImportItemRow ────────────────────────────────────────────────────────────
+
+function ImportItemRow({
+  item,
+  index,
+  onFileChange,
+  onUpdate,
+  onRemove,
+  canRemove,
+}: {
+  item: ImportItem;
+  index: number;
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onUpdate: (patch: Partial<ImportItem>) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+}) {
+  const localFileRef = useRef<HTMLInputElement>(null);
+
+  const statusBorder =
+    item.status === "done"
+      ? "border-green-400 bg-green-50"
+      : item.status === "error"
+      ? "border-red-400 bg-red-50"
+      : item.status === "uploading"
+      ? "border-blue-300 bg-blue-50"
+      : "border-border";
+
+  return (
+    <div
+      className={`rounded-xl border-2 p-4 transition-colors relative ${statusBorder}`}
+    >
+      {/* Row header */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold text-muted-foreground">
+          Meeting #{index + 1}
+        </span>
+        <div className="flex items-center gap-2">
+          {item.status === "uploading" && (
+            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+          )}
+          {item.status === "done" && (
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+          )}
+          {item.status === "error" && (
+            <AlertCircle className="h-4 w-4 text-red-500" />
+          )}
+          {canRemove && item.status === "idle" && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="rounded-full p-1 hover:bg-muted text-muted-foreground hover:text-destructive"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* File picker */}
+        <div className="sm:col-span-2 grid gap-1.5">
+          <Label className="text-xs">
+            File .md dari Notion <span className="text-red-500">*</span>
+          </Label>
+          <input
+            ref={localFileRef}
+            type="file"
+            accept=".md,.txt"
+            className="hidden"
+            onChange={onFileChange}
+          />
+          {item.file ? (
+            <div className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-background overflow-hidden min-w-0">
+              <FileText className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-sm font-medium truncate flex-1 min-w-0">
+                {item.file.name}
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {(item.file.size / 1024).toFixed(1)} KB
+              </span>
+              {item.status === "idle" && (
+                <button
+                  type="button"
+                  onClick={() => onUpdate({ file: null })}
+                  className="rounded-full p-0.5 hover:bg-muted shrink-0"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2 border-dashed h-12"
+              disabled={item.status !== "idle"}
+              onClick={() => localFileRef.current?.click()}
+            >
+              <Upload className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Klik untuk pilih file .md
+              </span>
+            </Button>
+          )}
+        </div>
+
+        {/* Title */}
+        <div className="grid gap-1.5">
+          <Label className="text-xs">
+            Judul Meeting <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            placeholder="Judul rapat..."
+            value={item.title}
+            disabled={item.status !== "idle"}
+            onChange={(e) => onUpdate({ title: e.target.value })}
+          />
+        </div>
+
+        {/* Date */}
+        <div className="grid gap-1.5">
+          <Label className="text-xs">
+            Tanggal &amp; Waktu <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            type="datetime-local"
+            className="[color-scheme:light]"
+            value={item.meeting_date}
+            disabled={item.status !== "idle"}
+            onChange={(e) => onUpdate({ meeting_date: e.target.value })}
+          />
+        </div>
+
+        {/* Description */}
+        <div className="sm:col-span-2 grid gap-1.5">
+          <Label className="text-xs">Deskripsi (opsional)</Label>
+          <Textarea
+            placeholder="Agenda atau konteks rapat..."
+            rows={2}
+            value={item.description}
+            disabled={item.status !== "idle"}
+            onChange={(e) => onUpdate({ description: e.target.value })}
+          />
+        </div>
+      </div>
+
+      {/* Error message */}
+      {item.status === "error" && (
+        <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          Gagal mengimpor. Periksa data dan coba lagi.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── MeetingsPage ─────────────────────────────────────────────────────────────
 
 export default function MeetingsPage() {
   const { user } = useAuthStore();
