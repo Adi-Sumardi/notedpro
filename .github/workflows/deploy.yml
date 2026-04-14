@@ -29,8 +29,26 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Upload backend via SCP
-        timeout-minutes: 10
+      # ── Verify SSH connectivity before SCP ───────────────────────────────────
+      - name: Wait for SSH to be reachable
+        timeout-minutes: 3
+        run: |
+          for i in $(seq 1 12); do
+            if nc -zw 10 ${{ secrets.SSH_HOST }} ${{ secrets.SSH_PORT }} 2>/dev/null; then
+              echo "SSH port reachable on attempt $i"
+              exit 0
+            fi
+            echo "Attempt $i: not reachable, retrying in 15s..."
+            sleep 15
+          done
+          echo "SSH port unreachable after 3 minutes — check server firewall"
+          exit 1
+
+      # ── SCP: backend ─────────────────────────────────────────────────────────
+      - name: Upload backend via SCP (attempt 1)
+        id: scp_backend_1
+        timeout-minutes: 5
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -40,9 +58,25 @@ jobs:
           source: "backend/"
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id/app"
           overwrite: true
-          timeout: 60s
+          timeout: 120s
           command_timeout: 8m
 
+      - name: Upload backend via SCP (retry)
+        if: steps.scp_backend_1.outcome == 'failure'
+        timeout-minutes: 5
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "backend/"
+          target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id/app"
+          overwrite: true
+          timeout: 120s
+          command_timeout: 8m
+
+      # ── Clear stale frontend chunks ───────────────────────────────────────────
       - name: Clear stale frontend chunks on server
         uses: appleboy/ssh-action@v1
         with:
@@ -50,12 +84,15 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          timeout: 300s
+          timeout: 120s
           script: |
             rm -rf $HOME/domains/simonik.yapinet.id/public_html/_next
 
-      - name: Upload frontend static files via SCP
-        timeout-minutes: 10
+      # ── SCP: frontend ─────────────────────────────────────────────────────────
+      - name: Upload frontend static files via SCP (attempt 1)
+        id: scp_frontend_1
+        timeout-minutes: 5
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -66,11 +103,30 @@ jobs:
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id/public_html"
           strip_components: 2
           overwrite: true
-          timeout: 60s
+          timeout: 120s
           command_timeout: 8m
 
-      - name: Upload deploy files via SCP
+      - name: Upload frontend static files via SCP (retry)
+        if: steps.scp_frontend_1.outcome == 'failure'
         timeout-minutes: 5
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "frontend/out/"
+          target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id/public_html"
+          strip_components: 2
+          overwrite: true
+          timeout: 120s
+          command_timeout: 8m
+
+      # ── SCP: deploy config ────────────────────────────────────────────────────
+      - name: Upload deploy files via SCP (attempt 1)
+        id: scp_deploy_1
+        timeout-minutes: 3
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -80,9 +136,25 @@ jobs:
           source: "deploy/"
           target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id"
           overwrite: true
-          timeout: 60s
+          timeout: 120s
           command_timeout: 3m
 
+      - name: Upload deploy files via SCP (retry)
+        if: steps.scp_deploy_1.outcome == 'failure'
+        timeout-minutes: 3
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "deploy/"
+          target: "/home/${{ secrets.SSH_USERNAME }}/domains/simonik.yapinet.id"
+          overwrite: true
+          timeout: 120s
+          command_timeout: 3m
+
+      # ── SSH: finalize ─────────────────────────────────────────────────────────
       - name: Setup backend & finalize deployment
         uses: appleboy/ssh-action@v1
         with:
@@ -90,7 +162,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          timeout: 300s
+          timeout: 120s
           command_timeout: 15m
           envs: DB_DATABASE,DB_USERNAME,DB_PASSWORD,MAIL_HOST,MAIL_PORT,MAIL_USERNAME,MAIL_PASSWORD,WATZAP_API_KEY,WATZAP_NUMBER_KEY
           script: |
