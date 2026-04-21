@@ -109,11 +109,13 @@ const FontSize = Extension.create({
     return {
       setFontSize:
         (fontSize: string) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ({ chain }: { chain: () => any }) => {
           return chain().setMark("textStyle", { fontSize }).run();
         },
       unsetFontSize:
         () =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ({ chain }: { chain: () => any }) => {
           return chain().setMark("textStyle", { fontSize: null }).removeEmptyTextStyle().run();
         },
@@ -145,11 +147,13 @@ const FontFamily = Extension.create({
     return {
       setFontFamily:
         (fontFamily: string) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ({ chain }: { chain: () => any }) => {
           return chain().setMark("textStyle", { fontFamily }).run();
         },
       unsetFontFamily:
         () =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ({ chain }: { chain: () => any }) => {
           return chain().setMark("textStyle", { fontFamily: null }).removeEmptyTextStyle().run();
         },

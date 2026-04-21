@@ -538,6 +538,7 @@ export default function WorkLogDetailPage() {
                 title={previewAttachment.name}
               />
             ) : previewAttachment?.type === "image" ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={previewAttachment.url}
                 alt={previewAttachment.name}
