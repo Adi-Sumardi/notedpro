@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex">
@@ -22,7 +24,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Top Content */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Simonik" className="h-10 w-10 rounded-lg" />
+            <Image src="/logo.png" alt="Simonik" width={40} height={40} className="rounded-lg" />
             <span className="text-xl font-bold tracking-tight">Simonik</span>
           </div>
         </div>

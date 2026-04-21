@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Menu,
@@ -226,7 +227,7 @@ export default function Header() {
             <div className="flex items-center gap-6">
               {/* Logo */}
               <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
-                <img src="/logo.png" alt="Simonik" className="h-8 w-8 rounded-lg" />
+                <Image src="/logo.png" alt="Simonik" width={32} height={32} className="rounded-lg" />
                 <span className="text-lg font-bold text-[#063E66] hidden sm:inline">Simonik</span>
               </Link>
 
@@ -328,7 +329,7 @@ export default function Header() {
           </SheetHeader>
           <div className="flex flex-col h-full">
             <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10">
-              <img src="/logo.png" alt="Simonik" className="h-8 w-8 rounded-lg" />
+              <Image src="/logo.png" alt="Simonik" width={32} height={32} className="rounded-lg" />
               <span className="text-lg font-bold text-white">Simonik</span>
             </div>
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">

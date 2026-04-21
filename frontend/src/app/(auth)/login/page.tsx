@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { AxiosError } from "axios";
 
 import { useAuthStore } from "@/stores/authStore";
@@ -74,7 +75,7 @@ export default function LoginPage() {
     <div className="space-y-8">
       {/* Mobile Logo (hidden on lg) */}
       <div className="flex flex-col items-center lg:hidden">
-        <img src="/logo.png" alt="Simonik" className="h-16 w-16 rounded-xl shadow-lg" />
+        <Image src="/logo.png" alt="Simonik" width={64} height={64} className="rounded-xl shadow-lg" />
         <h1 className="mt-3 text-2xl font-bold text-[#063E66]">Simonik</h1>
         <p className="text-sm text-muted-foreground">
           Sistem Manajemen Notulensi dan Kolaborasi
