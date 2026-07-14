@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\HrReportController;
 use App\Http\Controllers\Api\WorkLogController;
+use App\Http\Controllers\Api\YapinetSummaryController;
 use Illuminate\Support\Facades\Route;
 
 // All routes require stateful session (cookie + CSRF)
@@ -21,6 +22,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('web');
+
+// Yapinet integration: static API-key auth (Bearer token), no Sanctum session.
+// Intentionally outside the auth:sanctum/v1 group below.
+Route::middleware('yapinet.auth')
+    ->get('integrations/yapinet/summary', [YapinetSummaryController::class, 'summary']);
 
 Route::middleware('auth:sanctum')->group(function () {
 

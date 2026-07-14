@@ -40,4 +40,8 @@ return [
         'number_key' => env('WATZAP_NUMBER_KEY'),
     ],
 
+    'yapinet' => [
+        'api_key' => env('YAPINET_API_KEY'),
+    ],
+
 ];
