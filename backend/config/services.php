@@ -44,4 +44,8 @@ return [
         'api_key' => env('YAPINET_API_KEY'),
     ],
 
+    'notion' => [
+        'token' => env('NOTION_API_TOKEN'),
+    ],
+
 ];

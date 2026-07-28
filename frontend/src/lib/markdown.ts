@@ -190,6 +190,36 @@ export function markdownToHtml(md: string): string {
   return html;
 }
 
+/**
+ * Local image paths referenced by `![alt](src)` in a Notion markdown export
+ * (excludes already-absolute http(s)/data URIs). Used to match against files
+ * the user picks alongside the .md so they can be uploaded and the src
+ * rewritten to a real URL — otherwise the <img> tag from markdownToHtml
+ * points at a path that only ever existed on the exporter's disk.
+ */
+export function extractLocalImageRefs(md: string): string[] {
+  const refs = new Set<string>();
+  const re = /!\[.*?\]\((.+?)\)/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(md))) {
+    const src = match[1].trim();
+    if (!/^(https?:)?\/\//i.test(src) && !/^data:/i.test(src)) {
+      refs.add(src);
+    }
+  }
+  return Array.from(refs);
+}
+
+/** Replace `src="<ref>"` occurrences in already-converted HTML with resolved URLs. */
+export function rewriteImageSrcs(html: string, srcMap: Record<string, string>): string {
+  let out = html;
+  for (const [ref, url] of Object.entries(srcMap)) {
+    const escaped = ref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(new RegExp(`src="${escaped}"`, "g"), `src="${url}"`);
+  }
+  return out;
+}
+
 function escHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")

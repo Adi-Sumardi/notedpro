@@ -6,9 +6,11 @@ use App\Http\Controllers\Api\ExternalContactController;
 use App\Http\Controllers\Api\FollowUpController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\MeetingNoteController;
+use App\Http\Controllers\Api\MeetingNoteImageController;
 use App\Http\Controllers\Api\MeetingExternalParticipantController;
 use App\Http\Controllers\Api\MeetingParticipantController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\NotionImportController;
 use App\Http\Controllers\Api\TaskCommentController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\UserController;
@@ -46,6 +48,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Meetings
         Route::apiResource('meetings', MeetingController::class);
         Route::post('meetings/import', [MeetingController::class, 'import']);
+        Route::post('notion/preview', [NotionImportController::class, 'preview'])
+            ->middleware('permission:create-meeting');
         Route::patch('meetings/{meeting}/status', [MeetingController::class, 'updateStatus']);
         Route::get('meetings/{meeting}/attachment', [MeetingController::class, 'downloadAttachment']);
 
@@ -71,6 +75,8 @@ Route::middleware('auth:sanctum')->group(function () {
                 ->middleware('permission:create-notes');
             Route::put('notes/{note}', [MeetingNoteController::class, 'update'])
                 ->middleware('permission:edit-notes');
+            Route::post('notes/images', [MeetingNoteImageController::class, 'store'])
+                ->middleware('permission:create-notes|edit-notes');
         });
 
         // Follow-Up Items

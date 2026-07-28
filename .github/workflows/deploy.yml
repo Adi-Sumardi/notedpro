@@ -164,7 +164,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           timeout: 120s
           command_timeout: 15m
-          envs: DB_DATABASE,DB_USERNAME,DB_PASSWORD,MAIL_HOST,MAIL_PORT,MAIL_USERNAME,MAIL_PASSWORD,WATZAP_API_KEY,WATZAP_NUMBER_KEY
+          envs: DB_DATABASE,DB_USERNAME,DB_PASSWORD,MAIL_HOST,MAIL_PORT,MAIL_USERNAME,MAIL_PASSWORD,WATZAP_API_KEY,WATZAP_NUMBER_KEY,NOTION_API_TOKEN
           script: |
             set -e
 
@@ -198,6 +198,7 @@ jobs:
               sed -i "s|\"\${MAIL_PASSWORD}\"|$MAIL_PASSWORD|g" .env
               sed -i "s|\"\${WATZAP_API_KEY}\"|$WATZAP_API_KEY|g" .env
               sed -i "s|\"\${WATZAP_NUMBER_KEY}\"|$WATZAP_NUMBER_KEY|g" .env
+              sed -i "s|\"\${NOTION_API_TOKEN}\"|$NOTION_API_TOKEN|g" .env
 
               # Restore or generate APP_KEY
               if [ -n "$EXISTING_KEY" ]; then
@@ -240,3 +241,4 @@ jobs:
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
           WATZAP_API_KEY: ${{ secrets.WATZAP_API_KEY }}
           WATZAP_NUMBER_KEY: ${{ secrets.WATZAP_NUMBER_KEY }}
+          NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}

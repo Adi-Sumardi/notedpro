@@ -7,7 +7,8 @@ import { useMeetings, useImportMeeting } from "@/hooks/useMeetings";
 import { useAuthStore } from "@/stores/authStore";
 import type { Meeting } from "@/types/api";
 import PageHeader from "@/components/layout/PageHeader";
-import { markdownToHtml } from "@/lib/markdown";
+import { markdownToHtml, extractLocalImageRefs, rewriteImageSrcs } from "@/lib/markdown";
+import api from "@/lib/api";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
 
@@ -144,28 +145,49 @@ function MeetingCard({ meeting }: { meeting: Meeting }) {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ImportStatus = "idle" | "uploading" | "done" | "error";
+type ImportSource = "file" | "notion";
 
 interface ImportItem {
   id: string;
+  sourceType: ImportSource;
   file: File | null;
   fileName: string | null;
   /** Raw markdown text, read from the file as soon as it's selected — kept in
    *  state (and persisted to localStorage) so the row can still be submitted
    *  even if the browser drops the original File handle across a refresh. */
   fileText: string | null;
+  /** Optional images referenced by the markdown (e.g. Notion's exported
+   *  "assets" folder), matched by filename and uploaded after the meeting
+   *  + note are saved. Not persisted to the localStorage draft — File
+   *  objects aren't serializable — so a refresh only loses the images,
+   *  never the note text itself. */
+  imageFiles: File[];
+  /** Raw link or page ID pasted by the user when sourceType is "notion". */
+  notionSource: string;
+  /** HTML already resolved from the Notion API via /notion/preview — images
+   *  referenced in it are already downloaded server-side, so (unlike the
+   *  file-upload path) nothing further needs to be uploaded at submit time. */
+  notionContentHtml: string | null;
+  isResolvingNotion?: boolean;
   title: string;
   meeting_date: string;
   description: string;
   status: ImportStatus;
   errorMessage?: string;
+  /** Set when the meeting+note saved fine but some images failed to upload/match. */
+  warningMessage?: string;
 }
 
 function makeItem(): ImportItem {
   return {
     id: crypto.randomUUID(),
+    sourceType: "file",
     file: null,
     fileName: null,
     fileText: null,
+    imageFiles: [],
+    notionSource: "",
+    notionContentHtml: null,
     title: "",
     meeting_date: "",
     description: "",
@@ -185,7 +207,7 @@ function titleFromFileName(name: string): string {
 
 const IMPORT_DRAFT_KEY = "notedpro:meetings-import-draft";
 
-type PersistedImportItem = Omit<ImportItem, "file" | "status"> & {
+type PersistedImportItem = Omit<ImportItem, "file" | "imageFiles" | "status"> & {
   status: ImportStatus;
 };
 
@@ -198,9 +220,12 @@ function loadDraft(): ImportItem[] | null {
     if (!Array.isArray(parsed) || parsed.length === 0) return null;
     // File objects can't survive serialization — rows still show their
     // fileName/fileText but "uploading" rows revert to "idle" so they can be retried.
+    // Any referenced images have to be re-attached, since File[] can't be persisted either.
     return parsed.map((p) => ({
       ...p,
       file: null,
+      imageFiles: [],
+      isResolvingNotion: false,
       status: p.status === "uploading" ? "idle" : p.status,
     }));
   } catch {
@@ -210,20 +235,26 @@ function loadDraft(): ImportItem[] | null {
 
 function saveDraft(items: ImportItem[]) {
   if (typeof window === "undefined") return;
-  const hasContent = items.some((i) => i.title || i.fileText || i.description);
+  const hasContent = items.some(
+    (i) => i.title || i.fileText || i.description || i.notionSource || i.notionContentHtml
+  );
   if (!hasContent) {
     window.localStorage.removeItem(IMPORT_DRAFT_KEY);
     return;
   }
   const toStore: PersistedImportItem[] = items.map((item) => ({
     id: item.id,
+    sourceType: item.sourceType,
     fileName: item.fileName,
     fileText: item.fileText,
+    notionSource: item.notionSource,
+    notionContentHtml: item.notionContentHtml,
     title: item.title,
     meeting_date: item.meeting_date,
     description: item.description,
     status: item.status,
     errorMessage: item.errorMessage,
+    warningMessage: item.warningMessage,
   }));
   window.localStorage.setItem(IMPORT_DRAFT_KEY, JSON.stringify(toStore));
 }
@@ -247,6 +278,75 @@ function extractErrorMessage(err: unknown): string {
   }
   if (err instanceof Error) return err.message;
   return "Gagal mengimpor. Periksa data dan coba lagi.";
+}
+
+/**
+ * Uploads any selected image files that match an `![alt](src)` reference in
+ * the imported markdown (matched by filename, since Notion's relative paths
+ * are usually just "assets/<name>.png"), then rewrites the note's saved
+ * content_html to point at the real uploaded URLs. Returns a human-readable
+ * warning if some images couldn't be matched/uploaded, or undefined if
+ * everything succeeded (or there was nothing to do).
+ */
+async function uploadImagesAndPatchNote(
+  meetingId: number,
+  noteId: number,
+  html: string,
+  mdText: string,
+  imageFiles: File[]
+): Promise<string | undefined> {
+  const refs = extractLocalImageRefs(mdText);
+  if (refs.length === 0) return undefined;
+
+  const basename = (p: string) => p.split("/").pop()?.toLowerCase() ?? p.toLowerCase();
+  const filesByName = new Map(imageFiles.map((f) => [f.name.toLowerCase(), f]));
+
+  const srcMap: Record<string, string> = {};
+  let unmatched = 0;
+  let uploadFailed = 0;
+
+  for (const ref of refs) {
+    const match = filesByName.get(basename(ref));
+    if (!match) {
+      unmatched++;
+      continue;
+    }
+    try {
+      const form = new FormData();
+      form.append("image", match);
+      const res = await api.post(
+        `/api/v1/meetings/${meetingId}/notes/images`,
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      const url: string | undefined = res.data?.data?.url;
+      if (url) srcMap[ref] = url;
+      else uploadFailed++;
+    } catch {
+      uploadFailed++;
+    }
+  }
+
+  if (Object.keys(srcMap).length > 0) {
+    const patchedHtml = rewriteImageSrcs(html, srcMap);
+    try {
+      await api.put(`/api/v1/meetings/${meetingId}/notes/${noteId}`, {
+        content: null,
+        content_html: patchedHtml,
+      });
+    } catch {
+      return "Gambar berhasil diupload tapi gagal menyimpan catatan yang diperbarui.";
+    }
+  }
+
+  if (unmatched > 0 || uploadFailed > 0) {
+    const parts: string[] = [];
+    if (unmatched > 0) parts.push(`${unmatched} gambar tidak ditemukan di file yang dipilih`);
+    if (uploadFailed > 0) parts.push(`${uploadFailed} gambar gagal diupload`);
+    return `Meeting & catatan tersimpan, tapi ${parts.join(", ")}.`;
+  }
+
+  return undefined;
 }
 
 // ─── ImportNotionDialog ───────────────────────────────────────────────────────
@@ -313,6 +413,64 @@ function ImportNotionDialog({
     );
   }
 
+  function handleImagesChange(
+    id: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, imageFiles: [...item.imageFiles, ...files] }
+          : item
+      )
+    );
+  }
+
+  function removeImageFile(id: string, fileIndex: number) {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              imageFiles: item.imageFiles.filter((_, i) => i !== fileIndex),
+            }
+          : item
+      )
+    );
+  }
+
+  function setSourceType(id: string, sourceType: ImportSource) {
+    updateItem(id, { sourceType });
+  }
+
+  async function resolveNotionSource(id: string) {
+    const item = items.find((i) => i.id === id);
+    if (!item || !item.notionSource.trim()) {
+      toast.error("Tempel link atau ID halaman Notion terlebih dahulu");
+      return;
+    }
+
+    updateItem(id, { isResolvingNotion: true });
+    try {
+      const res = await api.post("/api/v1/notion/preview", {
+        source: item.notionSource.trim(),
+      });
+      const data = res.data?.data;
+      updateItem(id, {
+        notionContentHtml: data.content_html,
+        title: item.title || data.title,
+        isResolvingNotion: false,
+      });
+      toast.success("Data dari Notion berhasil ditarik");
+    } catch (err) {
+      updateItem(id, { isResolvingNotion: false });
+      toast.error(extractErrorMessage(err));
+    }
+  }
+
   function removeItem(id: string) {
     setItems((prev) => {
       const next = prev.filter((item) => item.id !== id);
@@ -346,8 +504,12 @@ function ImportNotionDialog({
         toast.error("Semua tanggal meeting wajib diisi");
         return;
       }
-      if (!item.fileText) {
+      if (item.sourceType === "file" && !item.fileText) {
         toast.error("Semua baris wajib memiliki file .md");
+        return;
+      }
+      if (item.sourceType === "notion" && !item.notionContentHtml) {
+        toast.error('Klik "Tarik Data" untuk baris dengan sumber Notion sebelum import');
         return;
       }
     }
@@ -361,7 +523,13 @@ function ImportNotionDialog({
     for (const item of pending) {
       updateItem(item.id, { status: "uploading", errorMessage: undefined });
       try {
-        const html = markdownToHtml(item.fileText!);
+        // Notion-sourced content is already resolved to HTML server-side
+        // (with images already downloaded), so it's used as-is. File-sourced
+        // content still goes through the local regex markdown converter.
+        const html =
+          item.sourceType === "notion"
+            ? item.notionContentHtml!
+            : markdownToHtml(item.fileText!);
 
         // Meeting + first note are created atomically on the backend (single
         // DB transaction) — either both are saved, or neither is, so a failed
@@ -374,9 +542,27 @@ function ImportNotionDialog({
           content: null,
           content_html: html,
         });
-        const meetingId: number = res.data?.id ?? res.data?.data?.id;
+        const meeting = res.data?.data ?? res.data;
+        const meetingId: number = meeting?.id;
+        const noteId: number | undefined = meeting?.latest_note?.id;
 
-        updateItem(item.id, { status: "done" });
+        // The meeting + note text are already safely saved at this point.
+        // Images are uploaded as a best-effort follow-up: any failure here
+        // is surfaced as a non-blocking warning, not an import failure.
+        // (Not applicable to Notion-sourced rows — images were already
+        // downloaded and embedded server-side by the /notion/preview call.)
+        let warningMessage: string | undefined;
+        if (item.sourceType === "file" && item.imageFiles.length > 0 && meetingId && noteId) {
+          warningMessage = await uploadImagesAndPatchNote(
+            meetingId,
+            noteId,
+            html,
+            item.fileText!,
+            item.imageFiles
+          );
+        }
+
+        updateItem(item.id, { status: "done", warningMessage });
         lastMeetingId = meetingId;
         successCount++;
       } catch (err) {
@@ -420,8 +606,9 @@ function ImportNotionDialog({
           </DialogTitle>
           <DialogDescription>
             Buat satu atau beberapa meeting sekaligus dari file Markdown (.md)
-            yang diekspor dari Notion. Klik <strong>Tambah Baris</strong> untuk
-            menambah meeting lain.
+            yang diekspor dari Notion, atau cukup tempel link/ID halaman
+            Notion untuk menarik datanya otomatis. Klik{" "}
+            <strong>Tambah Baris</strong> untuk menambah meeting lain.
           </DialogDescription>
         </DialogHeader>
 
@@ -433,6 +620,10 @@ function ImportNotionDialog({
               item={item}
               index={idx}
               onFileChange={(e) => handleFileChange(item.id, e)}
+              onImagesChange={(e) => handleImagesChange(item.id, e)}
+              onRemoveImage={(fileIndex) => removeImageFile(item.id, fileIndex)}
+              onSourceTypeChange={(v) => setSourceType(item.id, v)}
+              onResolveNotion={() => resolveNotionSource(item.id)}
               onUpdate={(patch) => updateItem(item.id, patch)}
               onRemove={() => removeItem(item.id)}
               canRemove={items.length > 1}
@@ -490,6 +681,10 @@ function ImportItemRow({
   item,
   index,
   onFileChange,
+  onImagesChange,
+  onRemoveImage,
+  onSourceTypeChange,
+  onResolveNotion,
   onUpdate,
   onRemove,
   canRemove,
@@ -497,11 +692,16 @@ function ImportItemRow({
   item: ImportItem;
   index: number;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onImagesChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemoveImage: (fileIndex: number) => void;
+  onSourceTypeChange: (v: ImportSource) => void;
+  onResolveNotion: () => void;
   onUpdate: (patch: Partial<ImportItem>) => void;
   onRemove: () => void;
   canRemove: boolean;
 }) {
   const localFileRef = useRef<HTMLInputElement>(null);
+  const imagesFileRef = useRef<HTMLInputElement>(null);
 
   const statusBorder =
     item.status === "done"
@@ -543,8 +743,80 @@ function ImportItemRow({
         </div>
       </div>
 
+      {/* Source type toggle */}
+      <div className="flex gap-1.5 mb-3">
+        <button
+          type="button"
+          disabled={item.status !== "idle"}
+          onClick={() => onSourceTypeChange("file")}
+          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+            item.sourceType === "file"
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          Upload file .md
+        </button>
+        <button
+          type="button"
+          disabled={item.status !== "idle"}
+          onClick={() => onSourceTypeChange("notion")}
+          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+            item.sourceType === "notion"
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          Tempel link Notion
+        </button>
+      </div>
+
+      {item.sourceType === "notion" && (
+        <div className="grid gap-1.5 mb-3">
+          <Label className="text-xs">
+            Link atau ID halaman Notion <span className="text-red-500">*</span>
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              placeholder="https://www.notion.so/Meeting-Notes-3a2f1c4d..."
+              value={item.notionSource}
+              disabled={item.status !== "idle"}
+              onChange={(e) =>
+                onUpdate({ notionSource: e.target.value, notionContentHtml: null })
+              }
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={item.status !== "idle" || item.isResolvingNotion}
+              onClick={onResolveNotion}
+              className="shrink-0 gap-1.5"
+            >
+              {item.isResolvingNotion ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              Tarik Data
+            </Button>
+          </div>
+          {item.notionContentHtml && (
+            <p className="text-xs text-green-600 flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Data berhasil ditarik dari Notion. Periksa judul & tanggal di bawah, lalu klik Import.
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Pastikan halaman ini sudah di-share ke integration Notion aplikasi ini
+            (••• → Connections di halaman Notion tersebut).
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* File picker */}
+        {item.sourceType === "file" && (
+        <>
         <div className="sm:col-span-2 grid gap-1.5">
           <Label className="text-xs">
             File .md dari Notion <span className="text-red-500">*</span>
@@ -593,6 +865,57 @@ function ImportItemRow({
           )}
         </div>
 
+        {/* Image picker (optional) */}
+        <div className="sm:col-span-2 grid gap-1.5">
+          <Label className="text-xs">
+            Gambar/lampiran dari Notion (opsional)
+          </Label>
+          <input
+            ref={imagesFileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={onImagesChange}
+          />
+          {item.imageFiles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {item.imageFiles.map((f, i) => (
+                <span
+                  key={`${f.name}-${i}`}
+                  className="flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs"
+                >
+                  {f.name}
+                  {item.status === "idle" && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveImage(i)}
+                      className="rounded-full hover:bg-muted"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto gap-1.5 border-dashed"
+            disabled={item.status !== "idle"}
+            onClick={() => imagesFileRef.current?.click()}
+          >
+            <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">
+              Pilih gambar yang direferensikan di catatan (mis. dari folder assets)
+            </span>
+          </Button>
+        </div>
+        </>
+        )}
+
         {/* Title */}
         <div className="grid gap-1.5">
           <Label className="text-xs">
@@ -638,6 +961,14 @@ function ImportItemRow({
         <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
           {item.errorMessage || "Gagal mengimpor. Periksa data dan coba lagi."}
+        </p>
+      )}
+
+      {/* Warning message — meeting/note saved fine, but images had issues */}
+      {item.status === "done" && item.warningMessage && (
+        <p className="mt-2 text-xs text-amber-600 flex items-center gap-1">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          {item.warningMessage}
         </p>
       )}
     </div>
