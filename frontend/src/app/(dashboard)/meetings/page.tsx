@@ -7,7 +7,12 @@ import { useMeetings, useImportMeeting } from "@/hooks/useMeetings";
 import { useAuthStore } from "@/stores/authStore";
 import type { Meeting } from "@/types/api";
 import PageHeader from "@/components/layout/PageHeader";
-import { markdownToHtml, extractLocalImageRefs, rewriteImageSrcs } from "@/lib/markdown";
+import {
+  markdownToHtml,
+  extractLocalImageRefs,
+  rewriteImageSrcs,
+  extractMeetingDateTime,
+} from "@/lib/markdown";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
@@ -397,6 +402,7 @@ function ImportNotionDialog({
 
     const text = await file.text();
     const title = titleFromFileName(file.name);
+    const meetingDate = extractMeetingDateTime(text);
 
     setItems((prev) =>
       prev.map((item) =>
@@ -407,6 +413,7 @@ function ImportNotionDialog({
               fileName: file.name,
               fileText: text,
               title: item.title || title,
+              meeting_date: item.meeting_date || meetingDate || "",
             }
           : item
       )
@@ -462,6 +469,7 @@ function ImportNotionDialog({
       updateItem(id, {
         notionContentHtml: data.content_html,
         title: item.title || data.title,
+        meeting_date: item.meeting_date || data.meeting_date || "",
         isResolvingNotion: false,
       });
       toast.success("Data dari Notion berhasil ditarik");

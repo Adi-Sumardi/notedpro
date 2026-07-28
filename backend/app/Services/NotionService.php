@@ -66,12 +66,14 @@ class NotionService
     {
         $page = $this->request("/pages/{$pageId}");
         $title = $this->extractTitle($page);
+        $meetingDate = $this->extractDateTime($page);
 
         $blocks = $this->fetchAllChildren($pageId);
         $html = $this->blocksToHtml($blocks);
 
         return [
             'title' => $title,
+            'meeting_date' => $meetingDate,
             'content_html' => $html,
         ];
     }
@@ -123,6 +125,51 @@ class NotionService
         }
 
         return 'Untitled';
+    }
+
+    /**
+     * Look for a "date" type property on the page (common on Notion database
+     * rows used for meeting notes, e.g. "Event time" / "Date" / "Tanggal")
+     * and return it as a "YYYY-MM-DDTHH:mm" string suitable for an HTML
+     * datetime-local input. Prefers properties whose name suggests it's the
+     * meeting's own date over unrelated date properties, falling back to
+     * whichever date property is found first.
+     */
+    private function extractDateTime(array $page): ?string
+    {
+        $preferredNames = ['event time', 'meeting date', 'tanggal & waktu', 'waktu', 'tanggal', 'date'];
+        $dateProps = [];
+
+        foreach ($page['properties'] ?? [] as $name => $property) {
+            if (($property['type'] ?? null) === 'date' && ! empty($property['date']['start'])) {
+                $dateProps[strtolower($name)] = $property['date']['start'];
+            }
+        }
+
+        if (empty($dateProps)) {
+            return null;
+        }
+
+        foreach ($preferredNames as $preferred) {
+            foreach ($dateProps as $name => $start) {
+                if (str_contains($name, $preferred)) {
+                    return $this->toDatetimeLocal($start);
+                }
+            }
+        }
+
+        return $this->toDatetimeLocal(reset($dateProps));
+    }
+
+    private function toDatetimeLocal(string $start): string
+    {
+        // Notion's date.start is either "2026-07-21" (date-only) or
+        // "2026-07-21T10:00:00.000+07:00" (date + time + offset).
+        if (strlen($start) === 10) {
+            return $start.'T00:00';
+        }
+
+        return substr($start, 0, 16);
     }
 
     private function fetchAllChildren(string $blockId): array

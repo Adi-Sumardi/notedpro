@@ -210,6 +210,25 @@ export function extractLocalImageRefs(md: string): string[] {
   return Array.from(refs);
 }
 
+/**
+ * Notion's plain-text markdown export of a database row lists its properties
+ * as "Property Name: value" lines near the top of the file (e.g.
+ * "Event time: July 21, 2026 10:00 AM"). Best-effort extraction so the
+ * meeting date/time can be pre-filled instead of typed in manually — falls
+ * back to null (leaving the field for the user) if nothing parseable is found.
+ */
+export function extractMeetingDateTime(md: string): string | null {
+  const match = md.match(/^(?:Event time|Meeting Date|Date|Tanggal|Waktu)\s*:\s*(.+)$/im);
+  if (!match) return null;
+
+  const raw = match[1].split("→")[0].trim();
+  const parsed = new Date(raw);
+  if (isNaN(parsed.getTime())) return null;
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+}
+
 /** Replace `src="<ref>"` occurrences in already-converted HTML with resolved URLs. */
 export function rewriteImageSrcs(html: string, srcMap: Record<string, string>): string {
   let out = html;
