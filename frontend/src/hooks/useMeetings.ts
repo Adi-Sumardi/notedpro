@@ -36,6 +36,17 @@ export function useCreateMeeting() {
   });
 }
 
+export function useImportMeeting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data } = await api.post("/api/v1/meetings/import", payload);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["meetings"] }),
+  });
+}
+
 export function useUpdateMeeting(id: number) {
   const qc = useQueryClient();
   return useMutation({

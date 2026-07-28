@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Meetings
         Route::apiResource('meetings', MeetingController::class);
+        Route::post('meetings/import', [MeetingController::class, 'import']);
         Route::patch('meetings/{meeting}/status', [MeetingController::class, 'updateStatus']);
         Route::get('meetings/{meeting}/attachment', [MeetingController::class, 'downloadAttachment']);
 

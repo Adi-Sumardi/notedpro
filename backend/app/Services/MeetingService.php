@@ -53,9 +53,9 @@ class MeetingService
             ->paginate($filters['per_page'] ?? 12);
     }
 
-    public function create(array $data, User $user, ?UploadedFile $attachment = null): Meeting
+    public function create(array $data, User $user, ?UploadedFile $attachment = null, ?\Closure $afterCreateInTransaction = null): Meeting
     {
-        $meeting = DB::transaction(function () use ($data, $user, $attachment) {
+        $meeting = DB::transaction(function () use ($data, $user, $attachment, $afterCreateInTransaction) {
             $meetingData = [
                 ...$data,
                 'created_by' => $user->id,
@@ -104,7 +104,16 @@ class MeetingService
                 $meeting->externalParticipants()->attach($externalAttach);
             }
 
-            return $meeting->load(['creator', 'participants', 'externalParticipants']);
+            $meeting = $meeting->load(['creator', 'participants', 'externalParticipants']);
+
+            // Allows callers (e.g. Notion import) to create dependent records such as
+            // the first MeetingNote in the SAME transaction, so a failure rolls back
+            // the meeting too instead of leaving an orphaned, note-less meeting.
+            if ($afterCreateInTransaction) {
+                $afterCreateInTransaction($meeting);
+            }
+
+            return $meeting;
         });
 
         // Send notifications to internal participants

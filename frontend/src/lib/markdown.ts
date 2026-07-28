@@ -102,28 +102,68 @@ export function markdownToHtml(md: string): string {
   // Horizontal rule
   html = html.replace(/^---+$/gm, "<hr>");
 
-  // Bold + italic, bold, italic, inline code, links
+  // Tables (GFM pipe tables) — process before bold/italic/link so cell
+  // formatting still runs on the extracted cell text further down.
+  const tables: string[] = [];
+  html = html.replace(
+    /^(\|.*\|)\n\|(?:\s*:?-+:?\s*\|)+\n((?:\|.*\|\n?)+)/gm,
+    (_, headerLine: string, bodyLines: string) => {
+      const splitRow = (line: string) =>
+        line
+          .trim()
+          .replace(/^\||\|$/g, "")
+          .split("|")
+          .map((c) => c.trim());
+
+      const headerCells = splitRow(headerLine)
+        .map((c) => `<th>${c}</th>`)
+        .join("");
+      const rows = bodyLines
+        .trim()
+        .split("\n")
+        .map((line) => {
+          const cells = splitRow(line).map((c) => `<td>${c}</td>`).join("");
+          return `<tr>${cells}</tr>`;
+        })
+        .join("");
+
+      const placeholder = `%%TABLE_${tables.length}%%`;
+      tables.push(`<table><thead><tr>${headerCells}</tr></thead><tbody>${rows}</tbody></table>`);
+      return placeholder;
+    }
+  );
+
+  // Bold + italic, bold, italic, inline code
   html = html.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
   html = html.replace(/\*\*(.+?)\*\*/g,     "<strong>$1</strong>");
   html = html.replace(/\*(.+?)\*/g,          "<em>$1</em>");
   html = html.replace(/`(.+?)`/g,            "<code>$1</code>");
+
+  // Images — must run before the generic link regex, otherwise
+  // ![alt](src) gets mistaken for a link and produces a broken <a> tag,
+  // silently dropping the image reference on import.
+  html = html.replace(/!\[(.*?)\]\((.+?)\)/g, '<img src="$2" alt="$1">');
+  // Links
   html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
 
   // Blockquotes
   html = html.replace(/^> (.+)$/gm, "<blockquote><p>$1</p></blockquote>");
 
-  // Unordered lists
-  html = html.replace(/((?:^[-*+] .+(?:\n|$))+)/gm, (match) => {
+  // Unordered lists — leading indentation is allowed (but not preserved as
+  // nesting) so indented/nested Notion sub-bullets are kept as list items
+  // instead of falling through to the paragraph step and losing their
+  // list structure entirely.
+  html = html.replace(/((?:^[ \t]*[-*+] .+(?:\n|$))+)/gm, (match) => {
     const items = match.trim().split("\n")
-      .map((l) => `<li>${l.replace(/^[-*+] /, "")}</li>`)
+      .map((l) => `<li>${l.replace(/^[ \t]*[-*+] /, "")}</li>`)
       .join("");
     return `<ul>${items}</ul>`;
   });
 
   // Ordered lists
-  html = html.replace(/((?:^\d+\. .+(?:\n|$))+)/gm, (match) => {
+  html = html.replace(/((?:^[ \t]*\d+\. .+(?:\n|$))+)/gm, (match) => {
     const items = match.trim().split("\n")
-      .map((l) => `<li>${l.replace(/^\d+\. /, "")}</li>`)
+      .map((l) => `<li>${l.replace(/^[ \t]*\d+\. /, "")}</li>`)
       .join("");
     return `<ol>${items}</ol>`;
   });
@@ -133,9 +173,14 @@ export function markdownToHtml(md: string): string {
   html = blocks.map((block) => {
     const b = block.trim();
     if (!b) return "";
-    if (/^<(h[1-6]|ul|ol|blockquote|pre|hr|%%CODE)/.test(b)) return b;
+    if (/^<(h[1-6]|ul|ol|blockquote|pre|hr|%%CODE|%%TABLE)/.test(b)) return b;
     return `<p>${b.replace(/\n/g, "<br>")}</p>`;
   }).filter(Boolean).join("\n");
+
+  // Restore tables
+  tables.forEach((table, i) => {
+    html = html.replace(`%%TABLE_${i}%%`, table);
+  });
 
   // Restore code blocks
   codeBlocks.forEach((code, i) => {

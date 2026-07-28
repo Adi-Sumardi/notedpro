@@ -1,15 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMeetings, useCreateMeeting } from "@/hooks/useMeetings";
+import { useMeetings, useImportMeeting } from "@/hooks/useMeetings";
 import { useAuthStore } from "@/stores/authStore";
 import type { Meeting } from "@/types/api";
 import PageHeader from "@/components/layout/PageHeader";
 import { markdownToHtml } from "@/lib/markdown";
-import api from "@/lib/api";
 import { toast } from "sonner";
+import { isAxiosError } from "axios";
 
 import {
   Card,
@@ -148,21 +148,105 @@ type ImportStatus = "idle" | "uploading" | "done" | "error";
 interface ImportItem {
   id: string;
   file: File | null;
+  fileName: string | null;
+  /** Raw markdown text, read from the file as soon as it's selected — kept in
+   *  state (and persisted to localStorage) so the row can still be submitted
+   *  even if the browser drops the original File handle across a refresh. */
+  fileText: string | null;
   title: string;
   meeting_date: string;
   description: string;
   status: ImportStatus;
+  errorMessage?: string;
 }
 
 function makeItem(): ImportItem {
   return {
     id: crypto.randomUUID(),
     file: null,
+    fileName: null,
+    fileText: null,
     title: "",
     meeting_date: "",
     description: "",
     status: "idle",
   };
+}
+
+/** Notion markdown exports are named "<Title> <32-char-hex-page-id>.md" —
+ *  strip that id suffix so auto-filled titles stay readable. */
+function titleFromFileName(name: string): string {
+  return name
+    .replace(/\.(md|txt)$/i, "")
+    .replace(/\s+[0-9a-f]{32}$/i, "")
+    .replace(/[-_]/g, " ")
+    .trim();
+}
+
+const IMPORT_DRAFT_KEY = "notedpro:meetings-import-draft";
+
+type PersistedImportItem = Omit<ImportItem, "file" | "status"> & {
+  status: ImportStatus;
+};
+
+function loadDraft(): ImportItem[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(IMPORT_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed: PersistedImportItem[] = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    // File objects can't survive serialization — rows still show their
+    // fileName/fileText but "uploading" rows revert to "idle" so they can be retried.
+    return parsed.map((p) => ({
+      ...p,
+      file: null,
+      status: p.status === "uploading" ? "idle" : p.status,
+    }));
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(items: ImportItem[]) {
+  if (typeof window === "undefined") return;
+  const hasContent = items.some((i) => i.title || i.fileText || i.description);
+  if (!hasContent) {
+    window.localStorage.removeItem(IMPORT_DRAFT_KEY);
+    return;
+  }
+  const toStore: PersistedImportItem[] = items.map((item) => ({
+    id: item.id,
+    fileName: item.fileName,
+    fileText: item.fileText,
+    title: item.title,
+    meeting_date: item.meeting_date,
+    description: item.description,
+    status: item.status,
+    errorMessage: item.errorMessage,
+  }));
+  window.localStorage.setItem(IMPORT_DRAFT_KEY, JSON.stringify(toStore));
+}
+
+function clearDraft() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(IMPORT_DRAFT_KEY);
+}
+
+function extractErrorMessage(err: unknown): string {
+  if (isAxiosError(err)) {
+    const data = err.response?.data as
+      | { message?: string; errors?: Record<string, string[]> }
+      | undefined;
+    if (data?.errors) {
+      const first = Object.values(data.errors)[0]?.[0];
+      if (first) return first;
+    }
+    if (data?.message) return data.message;
+    if (err.message) return err.message;
+  }
+  if (err instanceof Error) return err.message;
+  return "Gagal mengimpor. Periksa data dan coba lagi.";
 }
 
 // ─── ImportNotionDialog ───────────────────────────────────────────────────────
@@ -175,10 +259,27 @@ function ImportNotionDialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const router = useRouter();
-  const createMeeting = useCreateMeeting();
+  const importMeeting = useImportMeeting();
 
   const [items, setItems] = useState<ImportItem[]>([makeItem()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Restore an in-progress draft (survives refresh/tab-close) whenever the dialog opens.
+  useEffect(() => {
+    if (!open) return;
+    const draft = loadDraft();
+    if (draft && draft.some((i) => i.status !== "done")) {
+      setItems(draft);
+      toast.info("Draft import sebelumnya dipulihkan. File perlu dipilih ulang kecuali isi sudah tersimpan.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Keep the draft up to date so a refresh/tab-close doesn't wipe out typed data.
+  useEffect(() => {
+    if (!open) return;
+    saveDraft(items);
+  }, [items, open]);
 
   function updateItem(id: string, patch: Partial<ImportItem>) {
     setItems((prev) =>
@@ -186,21 +287,30 @@ function ImportNotionDialog({
     );
   }
 
-  function handleFileChange(
+  async function handleFileChange(
     id: string,
     e: React.ChangeEvent<HTMLInputElement>
   ) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const title = file.name.replace(/\.(md|txt)$/i, "").replace(/[-_]/g, " ");
+
+    const text = await file.text();
+    const title = titleFromFileName(file.name);
+
     setItems((prev) =>
       prev.map((item) =>
         item.id === id
-          ? { ...item, file, title: item.title || title }
+          ? {
+              ...item,
+              file,
+              fileName: file.name,
+              fileText: text,
+              title: item.title || title,
+            }
           : item
       )
     );
-    e.target.value = "";
   }
 
   function removeItem(id: string) {
@@ -218,6 +328,7 @@ function ImportNotionDialog({
     if (isSubmitting) return;
     setItems([makeItem()]);
     setIsSubmitting(false);
+    clearDraft();
     onOpenChange(false);
   }
 
@@ -235,7 +346,7 @@ function ImportNotionDialog({
         toast.error("Semua tanggal meeting wajib diisi");
         return;
       }
-      if (!item.file) {
+      if (!item.fileText) {
         toast.error("Semua baris wajib memiliki file .md");
         return;
       }
@@ -248,30 +359,31 @@ function ImportNotionDialog({
     let failCount = 0;
 
     for (const item of pending) {
-      updateItem(item.id, { status: "uploading" });
+      updateItem(item.id, { status: "uploading", errorMessage: undefined });
       try {
-        const meetingRes = await createMeeting.mutateAsync({
+        const html = markdownToHtml(item.fileText!);
+
+        // Meeting + first note are created atomically on the backend (single
+        // DB transaction) — either both are saved, or neither is, so a failed
+        // note never leaves behind an empty orphaned meeting.
+        const res = await importMeeting.mutateAsync({
           title: item.title.trim(),
           meeting_date: item.meeting_date,
           description: item.description.trim() || undefined,
           location_type: "offline",
-        });
-        const meetingId: number =
-          meetingRes.data?.id ?? meetingRes.data?.data?.id;
-
-        const md = await item.file!.text();
-        const html = markdownToHtml(md);
-
-        await api.post(`/api/v1/meetings/${meetingId}/notes`, {
           content: null,
           content_html: html,
         });
+        const meetingId: number = res.data?.id ?? res.data?.data?.id;
 
         updateItem(item.id, { status: "done" });
         lastMeetingId = meetingId;
         successCount++;
-      } catch {
-        updateItem(item.id, { status: "error" });
+      } catch (err) {
+        updateItem(item.id, {
+          status: "error",
+          errorMessage: extractErrorMessage(err),
+        });
         failCount++;
       }
     }
@@ -284,6 +396,7 @@ function ImportNotionDialog({
           ? "Meeting & catatan berhasil diimpor!"
           : `${successCount} meeting berhasil diimpor!`
       );
+      clearDraft();
       handleClose();
       if (lastMeetingId) router.push(`/meetings/${lastMeetingId}/notes`);
     } else if (successCount > 0) {
@@ -291,7 +404,7 @@ function ImportNotionDialog({
         `${successCount} berhasil, ${failCount} gagal. Periksa baris yang merah.`
       );
     } else {
-      toast.error("Semua import gagal. Coba lagi.");
+      toast.error("Semua import gagal. Periksa pesan error di tiap baris.");
     }
   }
 
@@ -443,19 +556,21 @@ function ImportItemRow({
             className="hidden"
             onChange={onFileChange}
           />
-          {item.file ? (
+          {item.fileName ? (
             <div className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-background overflow-hidden min-w-0">
               <FileText className="h-4 w-4 text-primary shrink-0" />
               <span className="text-sm font-medium truncate flex-1 min-w-0">
-                {item.file.name}
+                {item.fileName}
               </span>
-              <span className="text-xs text-muted-foreground shrink-0">
-                {(item.file.size / 1024).toFixed(1)} KB
-              </span>
+              {item.file && (
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {(item.file.size / 1024).toFixed(1)} KB
+                </span>
+              )}
               {item.status === "idle" && (
                 <button
                   type="button"
-                  onClick={() => onUpdate({ file: null })}
+                  onClick={() => onUpdate({ file: null, fileName: null, fileText: null })}
                   className="rounded-full p-0.5 hover:bg-muted shrink-0"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -522,7 +637,7 @@ function ImportItemRow({
       {item.status === "error" && (
         <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          Gagal mengimpor. Periksa data dan coba lagi.
+          {item.errorMessage || "Gagal mengimpor. Periksa data dan coba lagi."}
         </p>
       )}
     </div>

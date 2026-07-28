@@ -8,6 +8,7 @@ use App\Models\Meeting;
 use App\Models\MeetingNote;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MeetingNoteController extends Controller
 {
@@ -31,15 +32,17 @@ class MeetingNoteController extends Controller
             'content_html' => ['nullable', 'string'],
         ]);
 
-        $latestVersion = $meeting->notes()->max('version') ?? 0;
+        $note = DB::transaction(function () use ($meeting, $validated, $request) {
+            $latestVersion = $meeting->notes()->lockForUpdate()->max('version') ?? 0;
 
-        $note = MeetingNote::create([
-            'meeting_id' => $meeting->id,
-            'content' => $validated['content'] ?? null,
-            'content_html' => $validated['content_html'] ?? null,
-            'version' => $latestVersion + 1,
-            'created_by' => $request->user()->id,
-        ]);
+            return MeetingNote::create([
+                'meeting_id' => $meeting->id,
+                'content' => $validated['content'] ?? null,
+                'content_html' => $validated['content_html'] ?? null,
+                'version' => $latestVersion + 1,
+                'created_by' => $request->user()->id,
+            ]);
+        });
 
         return response()->json([
             'success' => true,

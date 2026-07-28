@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Meeting\ImportMeetingRequest;
 use App\Http\Requests\Meeting\StoreMeetingRequest;
 use App\Http\Requests\Meeting\UpdateMeetingRequest;
 use App\Http\Resources\MeetingResource;
 use App\Models\Meeting;
+use App\Models\MeetingNote;
 use App\Services\MeetingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,6 +50,40 @@ class MeetingController extends Controller
             'success' => true,
             'data' => new MeetingResource($meeting),
             'message' => 'Meeting berhasil dibuat.',
+        ], 201);
+    }
+
+    /**
+     * Create a meeting and its first note atomically (e.g. bulk import from
+     * Notion markdown export). If note creation fails, the meeting is rolled
+     * back too — no orphaned, note-less meetings.
+     */
+    public function import(ImportMeetingRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $contentHtml = $validated['content_html'];
+        $content = $validated['content'] ?? null;
+        unset($validated['content_html'], $validated['content']);
+
+        $meeting = $this->meetingService->create(
+            $validated,
+            $request->user(),
+            null,
+            function (Meeting $meeting) use ($content, $contentHtml, $request) {
+                MeetingNote::create([
+                    'meeting_id' => $meeting->id,
+                    'content' => $content,
+                    'content_html' => $contentHtml,
+                    'version' => 1,
+                    'created_by' => $request->user()->id,
+                ]);
+            }
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => new MeetingResource($meeting->load('latestNote')),
+            'message' => 'Meeting & catatan berhasil diimpor.',
         ], 201);
     }
 
