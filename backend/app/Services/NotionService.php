@@ -28,7 +28,14 @@ class NotionService
      */
     public function extractPageId(string $source): string
     {
-        $hex = preg_replace('/[^a-fA-F0-9]/', '', $source) ?? '';
+        // Drop any query string / fragment first — e.g. "?source=copy_link"
+        // or "?pvs=4" contain stray hex-looking letters (c, e, a, ...) that,
+        // if left in, get concatenated onto the stripped hex string and
+        // shift which 32 characters are picked up as the "page id",
+        // silently corrupting it.
+        $path = preg_split('/[?#]/', trim($source), 2)[0];
+
+        $hex = preg_replace('/[^a-fA-F0-9]/', '', $path) ?? '';
 
         if (strlen($hex) < 32) {
             throw ValidationException::withMessages([
