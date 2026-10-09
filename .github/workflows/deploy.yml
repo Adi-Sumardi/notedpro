@@ -182,8 +182,11 @@ jobs:
             if [ -f "$DEPLOY_DIR/.env.production" ]; then
               # Preserve existing APP_KEY if .env already exists
               EXISTING_KEY=""
+              EXISTING_YAPINET_KEY=""
               if [ -f .env ]; then
                 EXISTING_KEY=$(grep "^APP_KEY=" .env | cut -d'=' -f2-)
+                # Token portal Yapinet diisi langsung di server, bukan di template.
+                EXISTING_YAPINET_KEY=$(grep "^YAPINET_API_KEY=" .env | cut -d'=' -f2- || true)
               fi
 
               cp "$DEPLOY_DIR/.env.production" .env
@@ -205,6 +208,12 @@ jobs:
                 sed -i "s|^APP_KEY=.*|APP_KEY=$EXISTING_KEY|" .env
               else
                 php artisan key:generate --force
+              fi
+
+              if [ -n "$EXISTING_YAPINET_KEY" ]; then
+                grep -q "^YAPINET_API_KEY=" .env \
+                  && sed -i "s|^YAPINET_API_KEY=.*|YAPINET_API_KEY=$EXISTING_YAPINET_KEY|" .env \
+                  || printf '\nYAPINET_API_KEY=%s\n' "$EXISTING_YAPINET_KEY" >> .env
               fi
             fi
 
