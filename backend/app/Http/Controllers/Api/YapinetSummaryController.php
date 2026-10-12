@@ -94,6 +94,7 @@ class YapinetSummaryController extends Controller
                 'value' => $ratio ?? '—',
                 'format' => $ratio !== null ? 'percent' : 'text',
                 'progress' => $ratio,
+                'display' => $ratio !== null ? 'ring' : null,
                 'hint' => "{$onTime->count()} dari {$dueTasks->count()} tugas jatuh tempo",
                 'when' => $when,
             ], fn ($v) => $v !== null);
@@ -118,6 +119,16 @@ class YapinetSummaryController extends Controller
                 'options' => collect(self::PERIODS)->map(fn ($label, $days) => ['value' => (string) $days, 'label' => $label])->values(),
             ]],
             'attention' => $this->attention($overdue, $withoutPic->count(), $thisWeek, $status),
+            // v1.2: angka utama panel atas; label sama dengan metric supaya tidak tampil dua kali.
+            'hero' => [[
+                'value' => $openFollowUps->count(),
+                'format' => 'number',
+                'label' => 'Tindak lanjut terbuka',
+                'story' => ($overdue->isNotEmpty() ? "**{$overdue->count()} tugas** lewat tenggat" : 'Semua tugas sesuai jadwal')
+                    .($withoutPic->isNotEmpty() ? " · **{$withoutPic->count()}** belum punya penanggung jawab" : '')
+                    .($thisWeek->isNotEmpty() ? " · **{$thisWeek->count()} rapat** minggu ini." : '.'),
+                'side' => ['Selesai tepat waktu'],
+            ]],
             'metrics' => $metrics,
             'sections' => $sections,
         ]);
@@ -167,6 +178,8 @@ class YapinetSummaryController extends Controller
     {
         return [
             'type' => 'list',
+            'display' => 'aging',
+            'limit_days' => 14,
             'title' => "Tugas lewat tenggat ({$overdue->count()})",
             'items' => $overdue->take(8)->map(function (Task $task) {
                 $late = $this->daysLate($task);
@@ -178,6 +191,7 @@ class YapinetSummaryController extends Controller
                     'title' => $task->title,
                     'subtitle' => 'PIC: '.$pic.($task->followUpItem?->meeting ? ' · '.$task->followUpItem->meeting->title : ''),
                     'badge' => ['text' => "{$late} hari", 'tone' => $late > 14 ? 'critical' : 'warning'],
+                    'age_days' => $late,
                     'link' => "/tasks/{$task->id}",
                 ];
             })->values(),

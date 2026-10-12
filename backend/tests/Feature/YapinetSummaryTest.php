@@ -63,6 +63,11 @@ class YapinetSummaryTest extends TestCase
         $this->assertSame(['periode' => '30'], $rapat30['when']);
         $this->assertSame(1, $rapat30['value']);
 
+        // v1.2: hero tindak lanjut + cincin selesai tepat waktu, tugas lewat tenggat sebagai batang umur.
+        $this->assertSame('Tindak lanjut terbuka', $json['hero'][0]['label']);
+        $this->assertSame(['Selesai tepat waktu'], $json['hero'][0]['side']);
+        $this->assertSame('aging', collect($json['sections'])->first(fn ($s) => str_starts_with($s['title'] ?? '', 'Tugas lewat tenggat'))['display']);
+
         file_put_contents(sys_get_temp_dir().'/yapinet-summary-simonik.json', json_encode($json));
     }
 }
